@@ -1,11 +1,8 @@
 services:
-  api:
-    build: .
-    ports:
-      - "8080:8080"
-  mongo:
-    image: "mongo"
-    restart: always
+  db:
+    image: postgres
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
+     POSTGRES_PASSWORD: password
+     POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"

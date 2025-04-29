@@ -1,4 +1,4 @@
-package task
+package tasks
 
 type Task struct {
 	id       uint32

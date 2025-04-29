@@ -1,0 +1,10 @@
+###
+POST http://localhost:8080/tasks/pending
+Content-Type: application/json
+
+[
+  {
+    "type": "Configure",
+    "completed": false
+  }
+]
