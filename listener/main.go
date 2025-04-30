@@ -2,9 +2,8 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"gorm.io/plugin/serializer"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 )
@@ -22,7 +21,6 @@ func (t TaskType) String() string {
 	return [...]string{"Configure", "Ping", "ListThreads", "Execute", ""}[t-1]
 }
 
-// TODO: use default values?
 type Result struct {
 	gorm.Model
 	Content *string `json:"content"`
@@ -34,34 +32,36 @@ type Task struct {
 	gorm.Model
 	TaskType string `json:"type"`
 	// completed or done?
-	completed bool           `json:"completed"`
-	Options   map[string]any `json:"options" gorm:"serializer:json""`
-	Results   []Result       `json:"results"` //TODO: Results can be null
+	completed bool `json:"completed"`
+
+	// TODO: which one to use?
+	Options map[string]interface{} `json:"options" gorm:"serializer:json;type:jsonb""`
+	// Options datatypes.JSONMap      `gorm:"type:jsonb"`
+	Results []Result `json:"results"` //TODO: Results can be null
 }
 
 func main() {
-	/*
-		Local Connection Info:
-		- `psql -h localhost -p 5432 -U postgres -d postgres`
-
-	*/
 	// setup DB
-	// TODO: new var name instead of dsn?
-	dsn := "host=localhost port=5432 user=postgres sslmode=disable password=password"
-	db, err := gorm.Open("postgres", dsn)
+	dsn := "host=localhost user=postgres password=password dbname=postgres port=5432 sslmode=disable" // connect w/: `psql -h localhost -p 5432 -U postgres -d postgres`
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		// TODO: how to read these logs?
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
-
-	db.Use(serializer.New(serializer.Config{
-		Default: serializer.JSONSerializer{}, // handles JSON (de)serialization
-		Tag:     "serializer",                // looks for `serializer:"json"` tags
-	}))
 
 	db.AutoMigrate(&Task{})
 	db.AutoMigrate(&Result{})
+
+	task := Task{
+		TaskType:  "configure",
+		completed: false,
+		Options: map[string]interface{}{
+			"nme":  3,
+			"asdf": "ASdf",
+		},
+	}
+
+	db.Create(&task)
 
 	router := gin.Default()
 
@@ -118,5 +118,5 @@ func main() {
 
 	})
 
-	router.Run(":8080")
+	//	router.Run(":80") // Change depending on DNS?
 }

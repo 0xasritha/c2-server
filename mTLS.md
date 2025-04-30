@@ -1,0 +1,11 @@
+- **mTLS**: mutual authentication - ensures parties at each end of network connection are who they say they are, verifies that both have correct private "key"
+    - info w/in their respective TLS certs has additional verification 
+
+---
+- TLS: 
+    - authenticates server in client-server connection 
+    - encrypts communication between client/server
+    - uses public key cryptography: uses pair of keys (anything encrypted w/ public key can only be decrypted w/ private key)
+        - anyone can view public key by looking at domain's TLS cert
+    - TLS cert: data file w/ important info for verifying a server + which cert authority issued 
+    - TLS handshake: process for verifying TLS cert + server's possession of private key 
