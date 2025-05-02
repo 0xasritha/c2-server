@@ -18,8 +18,3 @@ func NewListener(db *gorm.DB, commProtocol CommProtocol) (Listener, error) {
 	}
 	return nil, fmt.Errorf("invalid communication protocol: %s", commProtocol)
 }
-
-type DNSListener struct {
-}
-
-func (listener *DNSListener) listen() {}
