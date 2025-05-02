@@ -2,7 +2,7 @@
 
 By Friday: 
 - working implant
-    - rn the implant only works if someone triggers exec /bin/bash on the container -> https://github.com/Frichetten/CVE-2019-5736-PoC/tree/master this works. (ideally would fix this so its upon running container), then write script to add inject this any container, test w nginx. create a script to also install older version of Docker so can easily test this even after runC is replaced
+    - then write script to add inject this any container, test w nginx. create a script to also install older version of Docker so can easily test this even after runC is replaced
     - instead of /bin/bash like the POC, it should do the wget to pull the implant in
 - working base Dockerfile w/ exploit code hidden + working script to generate more poisonous dockerfiles
 
@@ -24,9 +24,14 @@ So:
 - https://github.com/amenzhinsky/go-memexec  -> see chat 564 project
 ---
 
-# Insane Nice To Haves
-- concurrent execution
-- self-mutating malware 
-- inject into process? 
-- Custom Obfuscation/ Other obfuscation methods? (look at MITRE) 
-- persist through hijacking a docker command? 
+
+
+---
+# TODO: 
+- **Exploit:**
+
+- **Implant:** 
+
+- **Listener:**
+    
+- **Persistence:**
