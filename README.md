@@ -37,6 +37,7 @@
         - Cron Job (Persistence)
         - `Rc.local` modifications? (Persistence) (*NICE TO HAVE*)
         - Delete Docker container/daemon, Docker logging software logs (*NICE TO HAVE*)
+    - Make tasks execute concurrently (*NICE TO HAVE*)
 
 - **C2-Server:**
    - add CLI for operators (*NICE TO HAVE*)
