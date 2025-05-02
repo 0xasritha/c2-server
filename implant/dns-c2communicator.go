@@ -2,7 +2,7 @@ package main
 
 type DNSC2Communicator struct{}
 
-func (D *DNSC2Communicator) Beacon(results []Result) (*TaskQueue, error) {
+func (D *DNSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue, error) {
 
 	return NewTaskQueue(), nil
 }

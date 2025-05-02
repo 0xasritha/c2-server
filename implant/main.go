@@ -6,10 +6,10 @@ import (
 )
 
 const (
-	C2HTTPSURI            = "https://listener.free.beeceptor.com"
+	C2HTTPSURI            = "http://localhost:80"
 	C2DNSDOMAIN           = "evilc2server.com"
-	C2REGISTERENDPOINT    = "/register"
-	C2HTTPSBEACONENDPOINT = "/beacon"
+	C2REGISTERENDPOINT    = "/implant/register"
+	C2HTTPSBEACONENDPOINT = "/implant/beacon"
 )
 
 func init() {

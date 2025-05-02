@@ -4,8 +4,9 @@ import (
 	"fmt"
 )
 
+// TODO: rename this to C2Client?
 type C2Communicator interface {
-	Beacon(results []Result) (*TaskQueue, error)
+	Beacon(implantID uint, results []Result) (*TaskQueue, error)
 }
 
 // NewC2Communicator picks the right implementation based on protocol.
