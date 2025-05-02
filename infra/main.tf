@@ -68,6 +68,21 @@ resource "google_compute_firewall" "allow_https" {
   description   = "Allow HTTPS traffic"
 }
 
+resource "google_compute_firewall" "allow_dns" {
+  name    = "default-allow-dns"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["53"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["dns-server"]
+  direction     = "INGRESS"
+  description   = "Allow DNS traffic"
+}
+
 # Storage Bucket to host implant
 resource "google_storage_bucket" "implant" {
   name = "564-proj-host-implant"

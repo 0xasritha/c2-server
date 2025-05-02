@@ -70,7 +70,7 @@
 
 - most common: 
   - TXT records (bc they allow arbitrary text data)
-  - A records: implant enocdes data into subdomains, response gives dummy IP)
+  - A records: implant encodes data into subdomains, response gives dummy IP)
 
 
 
