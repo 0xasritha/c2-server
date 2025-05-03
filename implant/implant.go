@@ -47,6 +47,7 @@ func NewImplant() (*Implant, error) {
 }
 
 // register contacts the /register endpoint, fills impl.ID, and returns the c2's chosen communication protocol
+// also generates a secret key, public key, and a shared secret key with c2 server
 func (i *Implant) register() (string, error) {
 	const endpoint = C2HTTPSURI + C2REGISTERENDPOINT
 
