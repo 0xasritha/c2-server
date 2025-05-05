@@ -2,6 +2,22 @@ package main
 
 import "github.com/miekg/dns"
 
+type Header struct {
+}
+
+// TODO: move this to client.go
+type QueryMessage struct {
+	// header records
+	// question records
+}
+
+type ResponseMessage struct {
+	// header
+	// question
+	// records
+	// answer records
+}
+
 func Server() {
 	server := &dns.Server{
 		Addr: ":53",
@@ -17,7 +33,7 @@ func Server() {
 				    Compress bool `json:"-"`
 				    Question []Question
 				    Answer   []RR
-				    Ns       []RR
+				   Ns       []RR
 				    Extra    []RR
 			}
 
