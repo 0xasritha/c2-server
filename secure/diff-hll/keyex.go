@@ -6,26 +6,6 @@ import (
 	"math/big"
 )
 
-func generatePrime() int {
-	prime, _ := rand.Prime(rand.Reader, 63)
-	return int(prime.Int64())
-}
-
-func generatePrivateKey(prime int) *big.Int {
-	privateKey, _ := rand.Int(rand.Reader, big.NewInt(int64(prime)))
-	return privateKey
-}
-
-func calculatePublicKey(prime, privateKey, base *big.Int) *big.Int {
-	publicKey := new(big.Int).Exp(base, privateKey, prime)
-	return publicKey
-}
-
-func calculateSharedSecret(prime, privateKey, publicKey *big.Int) *big.Int {
-	sharedSecret := new(big.Int).Exp(publicKey, privateKey, prime)
-	return sharedSecret
-}
-
 func powMod(a, b, m int) int {
 	result := 1
 	a %= m
@@ -86,4 +66,24 @@ func generatePrimitiveRoot(p int) int {
 		}
 	}
 	return -1
+}
+
+func generatePrime() int {
+	prime, _ := rand.Prime(rand.Reader, 63)
+	return int(prime.Int64())
+}
+
+func generatePrivateKey(prime int) *big.Int {
+	privateKey, _ := rand.Int(rand.Reader, big.NewInt(int64(prime)))
+	return privateKey
+}
+
+func calculatePublicKey(prime, privateKey, base *big.Int) *big.Int {
+	publicKey := new(big.Int).Exp(base, privateKey, prime)
+	return publicKey
+}
+
+func calculateSharedSecret(prime, privateKey, publicKey *big.Int) *big.Int {
+	sharedSecret := new(big.Int).Exp(publicKey, privateKey, prime)
+	return sharedSecret
 }
