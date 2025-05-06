@@ -37,8 +37,9 @@ func primeFactors(n int) []int {
 	return factors
 }
 
-func generatePrimitiveRoot(p int) int {
-	phi := p - 1
+func generatePrimitiveRoot(p uint) int {
+	int_p := int(p)
+	phi := int_p - 1
 	raw := primeFactors(phi)
 	unique := []int{}
 	for _, f := range raw {
@@ -53,10 +54,10 @@ func generatePrimitiveRoot(p int) int {
 			unique = append(unique, f)
 		}
 	}
-	for g := 2; g < p; g++ {
+	for g := 2; g < int_p; g++ {
 		ok := true
 		for _, q := range unique {
-			if powMod(g, phi/q, p) == 1 {
+			if powMod(g, phi/q, int_p) == 1 {
 				ok = false
 				break
 			}
@@ -68,9 +69,9 @@ func generatePrimitiveRoot(p int) int {
 	return -1
 }
 
-func generatePrime() int {
+func generatePrime() uint {
 	prime, _ := rand.Prime(rand.Reader, 63)
-	return int(prime.Int64())
+	return uint(prime.Int64())
 }
 
 func generatePrivateKey() *big.Int {
