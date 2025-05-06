@@ -52,3 +52,4 @@
 - **Infra:**
     - setup proxy (*NICE TO HAVE*)
 - **Presentation**
+- organize + clean up all code (add comments) 
