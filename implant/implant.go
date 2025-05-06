@@ -37,27 +37,30 @@ Implant side:
 2) generate shared-secret key based on prime, server public key, and implant private key
 */
 
-// ImplantConfig is the implant configuration sent from the C2Server
-type ImplantConfig struct {
-	Dwell             string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
-	Jitter            float64 `json:"jitter"`
-	p                 int
-	g                 int
-	server_public_key int
-	//TODO: TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
+// BeaconConfig stores implant beacon configuration settings
+type BeaconConfig struct {
+	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
+	Jitter float64 `json:"jitter"`
+}
+
+// CryptoConfig stores shared crypto settings w/ the C2Server
+type CryptoConfig struct {
+	Prime           uint    `json:"prime"`
+	Generator       uint    `json:"generator"`
+	ServerPublicKey big.Int `json:"server_public_key"`
+	PublicKey       big.Int `json:"public_key"`
+	sharedSecret    big.Int
+	privateKey      big.Int
 }
 
 type Implant struct {
-	ID     uint           `json:"id"`
-	Config *ImplantConfig `json:"config"`
+	ID           uint          `json:"id"`
+	BeaconConfig *BeaconConfig `json:"beacon_config"`
+	CryptoConfig *CryptoConfig `json:"crypto_config"`
 	SystemInfo
 	TaskQueue *TaskQueue
 	Results   []Result
 	C2Communicator
-	shared_prime       int
-	shared_generator   int
-	private_key        *big.Int
-	implant_public_key *big.Int
 }
 
 // NewImplant instantiates an Implant, registers it, and wires up its communicator.
