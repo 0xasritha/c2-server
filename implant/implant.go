@@ -50,7 +50,6 @@ func NewImplant() (*Implant, error) {
 		TaskQueue:          NewTaskQueue(),
 		shared_prime:       p,
 		shared_generator:   g,
-		private_key:        priv_key,
 		implant_public_key: calculatePublicKey(p, priv_key, g),
 	}
 
