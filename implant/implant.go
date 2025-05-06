@@ -17,6 +17,27 @@ import (
 	"github.com/go-co-op/gocron/v2"
 )
 
+/*
+Implant Side:
+1) generate prime value
+2) generate generator value (used to generate the public key)
+3) generate private key
+4) generate public key based on prime+private key+generator
+5) send public key, prime, and generator to server
+
+Server side:
+1) receive implant public key, prime, generator from implant
+2) generate private key
+3) generate public key based on prime, private key and generator
+4) generate shared-secret key based on prime, implant public key, and server private key
+5) send public key to implant
+
+Implant side:
+1) receive public key
+2) generate shared-secret key based on prime, server public key, and implant private key
+*/
+
+// ImplantConfig is the implant configuration sent from the C2Server
 type ImplantConfig struct {
 	Dwell             string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
 	Jitter            float64 `json:"jitter"`
