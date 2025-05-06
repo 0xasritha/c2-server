@@ -8,6 +8,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: Key Exchange
+// 1) Receive CryptoConfig from Implant and retrieve Prime, Generator, SelfPublicKey
+// 2) Create own CryptoConfig (c := NewCryptoConfig())
+// 3) Set P, G, and OtherPublicKey fields using implant information
+// 4) Generate own private key (c.generatePrivateKey())
+// 5) Generate shared-secret (c.generateSharedSecret())
+// 6) Send to implant at the very least the server's c.SelfPublicKey (so the server key)
+
 type HTTPSListener struct {
 	db *gorm.DB
 }

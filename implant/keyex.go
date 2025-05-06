@@ -18,10 +18,6 @@ type CryptoConfig struct {
 
 func NewCryptoConfig() *CryptoConfig {
 	c := new(CryptoConfig)
-	c.generatePrime()
-	c.generateGenerator(c.Prime)
-	c.generatePrivateKey()
-	c.calculatePublicKey(c.Prime, c.privateKey, c.Generator)
 	return c
 }
 
@@ -30,8 +26,8 @@ func (c *CryptoConfig) generatePrime() {
 	c.Prime = uint(prime.Int64())
 }
 
-func (c *CryptoConfig) generateGenerator(p uint) {
-	c.Generator = generatePrimitiveRoot(p)
+func (c *CryptoConfig) generateGenerator() {
+	c.Generator = generatePrimitiveRoot(c.Prime)
 	// should i make this uint? -1 is for error
 }
 
@@ -40,12 +36,12 @@ func (c *CryptoConfig) generatePrivateKey() {
 	c.privateKey, _ = rand.Int(rand.Reader, prime)
 }
 
-func (c *CryptoConfig) calculatePublicKey(prime uint, privateKey *big.Int, base int) {
-	c.SelfPublicKey = new(big.Int).Exp(big.NewInt(int64(base)), privateKey, big.NewInt(int64(prime)))
+func (c *CryptoConfig) calculatePublicKey() {
+	c.SelfPublicKey = new(big.Int).Exp(big.NewInt(int64(c.Generator)), c.privateKey, big.NewInt(int64(c.Prime)))
 }
 
-func (c *CryptoConfig) calculateSharedSecret(prime int, privateKey, publicKey *big.Int) {
-	c.sharedSecret = new(big.Int).Exp(publicKey, privateKey, big.NewInt(int64(prime)))
+func (c *CryptoConfig) calculateSharedSecret() {
+	c.sharedSecret = new(big.Int).Exp(c.SelfPublicKey, c.privateKey, big.NewInt(int64(c.Prime)))
 }
 
 func powMod(a, b, m int) int {
