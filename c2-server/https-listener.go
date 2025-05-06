@@ -16,7 +16,9 @@ type HTTPSListener struct {
 func (l *HTTPSListener) listen() {
 	router := gin.Default()
 
-	// Implant endpoints
+	// TODO: change these endpoints to /new, /cmd/task, etc. so it lines up w/ DNS?
+
+	// Implant endpoints (HTTPS listener)
 	implant := router.Group("/implant")
 	implant.POST("/register", l.Register)
 	implant.POST("/beacon", l.Beacon)

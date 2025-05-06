@@ -18,7 +18,7 @@ func init() {
 }
 
 func main() {
-	implant, err := NewImplant()
+	implant, err := NewImplant() // TODO: when implant registers, have it so that at first it attempts to connect via HTTPS, then if unavailble does DNS -> will not send all systeminfo in DNS?
 	if err != nil {
 		panic(err)
 	}
