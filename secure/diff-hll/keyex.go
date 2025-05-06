@@ -1,4 +1,4 @@
-package keyex
+package main
 
 import (
 	"crypto/rand"
@@ -78,12 +78,12 @@ func generatePrivateKey(prime int) *big.Int {
 	return privateKey
 }
 
-func calculatePublicKey(prime, privateKey, base *big.Int) *big.Int {
-	publicKey := new(big.Int).Exp(base, privateKey, prime)
+func calculatePublicKey(prime int, privateKey *big.Int, base int) *big.Int {
+	publicKey := new(big.Int).Exp(big.NewInt(int64(base)), privateKey, big.NewInt(int64(prime)))
 	return publicKey
 }
 
-func calculateSharedSecret(prime, privateKey, publicKey *big.Int) *big.Int {
-	sharedSecret := new(big.Int).Exp(publicKey, privateKey, prime)
+func calculateSharedSecret(prime int, privateKey, publicKey *big.Int) *big.Int {
+	sharedSecret := new(big.Int).Exp(publicKey, privateKey, big.NewInt(int64(prime)))
 	return sharedSecret
 }
