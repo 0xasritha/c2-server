@@ -47,12 +47,11 @@ type SystemInfo struct {
 type Implant struct {
 	gorm.Model
 	SystemInfo
-
 	Dwell        string       `json:"dwell" gorm:"default:'5m'"`
 	Jitter       float64      `json:"jitter" gorm:"default:0"`
 	CommProtocol CommProtocol `json:"comm_protocol" gorm:"default:0"`
-
-	Tasks []Task `gorm:"foreignKey:ImplantID;constraint:OnDelete:CASCADE;"`
+	CryptoConfig CryptoConfig `json:"crypto_config`
+	Tasks        []Task       `gorm:"foreignKey:ImplantID;constraint:OnDelete:CASCADE;"`
 }
 
 type Task struct {

@@ -55,10 +55,6 @@ type Implant struct {
 
 // NewImplant instantiates an Implant, registers it, and wires up its communicator.
 func NewImplant() (*Implant, error) {
-	p := generatePrime()
-	g := generatePrime()
-	priv_key := generatePrivateKey()
-
 	impl := &Implant{
 		SystemInfo:   GetSystemInfo(),
 		TaskQueue:    NewTaskQueue(),

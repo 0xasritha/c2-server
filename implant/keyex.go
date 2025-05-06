@@ -8,12 +8,12 @@ import (
 
 // CryptoConfig stores shared crypto settings w/ the C2Server
 type CryptoConfig struct {
-	Prime           uint     `json:"prime"`
-	Generator       int      `json:"generator"`
-	ServerPublicKey *big.Int `json:"server_public_key"`
-	PublicKey       *big.Int `json:"public_key"`
-	sharedSecret    *big.Int // field will be empty until exchange occurs
-	privateKey      *big.Int
+	Prime          uint     `json:"prime"`
+	Generator      int      `json:"generator"`
+	OtherPublicKey *big.Int `json:"other_public_key"`
+	SelfPublicKey  *big.Int `json:"self_public_key"`
+	sharedSecret   *big.Int // field will be empty until exchange occurs
+	privateKey     *big.Int
 }
 
 func NewCryptoConfig() *CryptoConfig {
@@ -41,7 +41,7 @@ func (c *CryptoConfig) generatePrivateKey() {
 }
 
 func (c *CryptoConfig) calculatePublicKey(prime uint, privateKey *big.Int, base int) {
-	c.PublicKey = new(big.Int).Exp(big.NewInt(int64(base)), privateKey, big.NewInt(int64(prime)))
+	c.SelfPublicKey = new(big.Int).Exp(big.NewInt(int64(base)), privateKey, big.NewInt(int64(prime)))
 }
 
 func (c *CryptoConfig) calculateSharedSecret(prime int, privateKey, publicKey *big.Int) {
