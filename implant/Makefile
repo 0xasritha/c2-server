@@ -1,8 +1,34 @@
-CMDS := $(notdir $(wildcard cmd/*))
-all: $(patsubst %,build-%, $(CMDS))
+BINARY  := myapp
 
-define BUILD_CMD
-build-$(1):
-  @$(GARBLE) build -o $(BIN_DIR)/$(1) ./cmd/$(1)
-endef
-$(foreach cmd,$(CMDS),$(eval $(call BUILD_CMD,$(cmd))))
+BIN_DIR := bin
+
+GO      := go
+
+GARBLE  := garble
+
+PACKAGES := $(shell $(GO) list ./... | grep -v /vendor/)
+
+.PHONY: all install-garble deps build clean
+
+all: install-garble deps build
+
+install-garble:
+	@which $(GARBLE) >/dev/null 2>&1 || \
+		$(GO) install mvdan.cc/garble@latest
+
+deps:
+	$(GO) mod tidy
+
+build:
+	@mkdir -p $(BIN_DIR)
+	$(GARBLE) -literals -tiny build -o $(BIN_DIR)/$(BINARY) ./...
+
+clean:
+	rm -rf $(BIN_DIR)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage:
+#   make          # installs garble, tidies deps, and builds obfuscated binary
+#   make build    # just builds the obfuscated binary
+#   make clean    # removes the `bin/` directory
+# ─────────────────────────────────────────────────────────────────────────────
