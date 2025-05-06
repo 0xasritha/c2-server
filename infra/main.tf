@@ -26,7 +26,7 @@ resource "google_compute_instance" "c2_server" {
     }
   }
 
-  tags = ["http-server", "https-server"]
+  tags = ["http-server", "https-server", "dns-server"]
 }
 
 # Static External IP
@@ -74,6 +74,10 @@ resource "google_compute_firewall" "allow_dns" {
 
   allow {
     protocol = "tcp"
+    ports    = ["53"]
+  }
+  allow {
+    protocol = "udp"
     ports    = ["53"]
   }
 
