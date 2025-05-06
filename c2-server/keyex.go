@@ -10,7 +10,7 @@ import (
 type CryptoConfig struct {
 	Prime          uint     `json:"prime"`
 	Generator      int      `json:"generator"`
-	OtherPublicKey *big.Int `json:"other_public_key"`
+	OtherPublicKey *big.Int `json:"other_public_key"` // field will be empty until exchange occurs
 	SelfPublicKey  *big.Int `json:"self_public_key"`
 	sharedSecret   *big.Int // field will be empty until exchange occurs
 	privateKey     *big.Int

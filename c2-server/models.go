@@ -45,6 +45,7 @@ type SystemInfo struct {
 }
 
 type Implant struct {
+	// TODO: separate dwell and jitter into beacon config?
 	gorm.Model
 	SystemInfo
 	Dwell        string       `json:"dwell" gorm:"default:'5m'"`
