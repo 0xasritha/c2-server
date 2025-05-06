@@ -22,13 +22,3 @@ deps:
 build:
 	@mkdir -p $(BIN_DIR)
 	$(GARBLE) -literals -tiny build -o $(BIN_DIR)/$(BINARY) ./...
-
-clean:
-	rm -rf $(BIN_DIR)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Usage:
-#   make          # installs garble, tidies deps, and builds obfuscated binary
-#   make build    # just builds the obfuscated binary
-#   make clean    # removes the `bin/` directory
-# ─────────────────────────────────────────────────────────────────────────────
