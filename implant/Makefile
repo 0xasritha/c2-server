@@ -1,6 +1,6 @@
 BINARY  := myapp
 
-BIN_DIR := bin
+TMP_DIR := tmp
 
 GO      := go
 
@@ -20,5 +20,5 @@ deps:
 	$(GO) mod tidy
 
 build:
-	@mkdir -p $(BIN_DIR)
-	$(GARBLE) -literals -tiny build -o $(BIN_DIR)/$(BINARY) ./...
+	@mkdir -p $(TMP_DIR)
+	$(GARBLE) -literals -tiny build -o $(TMP_DIR)/$(BINARY) ./...
