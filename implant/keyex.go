@@ -73,8 +73,9 @@ func generatePrime() int {
 	return int(prime.Int64())
 }
 
-func generatePrivateKey(prime int) *big.Int {
-	privateKey, _ := rand.Int(rand.Reader, big.NewInt(int64(prime)))
+func generatePrivateKey() *big.Int {
+	prime, _ := rand.Prime(rand.Reader, 128)
+	privateKey, _ := rand.Int(rand.Reader, prime)
 	return privateKey
 }
 

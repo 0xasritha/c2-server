@@ -37,7 +37,7 @@ type Implant struct {
 func NewImplant() (*Implant, error) {
 	p := generatePrime()
 	g := generatePrime()
-	priv_key := generatePrivateKey(generatePrime())
+	priv_key := generatePrivateKey()
 
 	impl := &Implant{
 		SystemInfo:         GetSystemInfo(),
