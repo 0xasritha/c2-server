@@ -1,7 +1,6 @@
 package task
 
 import (
-	"log"
 	"os/exec"
 )
 

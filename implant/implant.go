@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
-	"time"
 	"os/exec"
+	"time"
 
 	"asritha.dev/implant/pkg/c2communicator"
 	"asritha.dev/implant/pkg/task"

