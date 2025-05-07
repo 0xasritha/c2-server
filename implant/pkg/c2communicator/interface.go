@@ -2,7 +2,6 @@ package c2communicator
 
 import (
 	"asritha.dev/implant/pkg/task"
-	"fmt"
 )
 
 type C2Communicator interface {
@@ -10,13 +9,13 @@ type C2Communicator interface {
 }
 
 // NewC2Communicator picks the right implementation based on protocol.
-func New(protocol string) (C2Communicator, error) {
-	switch protocol {
-	case "HTTPS":
-		return NewHTTPSC2Communicator(), nil
-	case "DNS":
-		return NewDNSC2Communicator(), nil
-	default:
-		return nil, fmt.Errorf("unsupported C2 protocol %q", protocol)
-	}
-}
+//func New(protocol string) (C2Communicator, error) {
+//	switch protocol {
+//	case "HTTPS":
+//		return NewHTTPSC2Communicator(), nil
+//	case "DNS":
+//		return NewDNSC2Communicator(), nil
+//	default:
+//		return nil, fmt.Errorf("unsupported C2 protocol %q", protocol)
+//	}
+//}

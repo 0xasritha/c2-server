@@ -161,7 +161,7 @@ func (d *DNSC2Communicator) GetRequestedCommands(implantID uint) (map[uint][]str
 	return commands, nil
 }
 
-func NewDNSC2Communicator() *DNSC2Communicator {
+func NewDNS() *DNSC2Communicator {
 	return &DNSC2Communicator{
 		client: &dns.Client{},
 	}

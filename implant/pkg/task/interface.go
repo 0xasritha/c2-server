@@ -1,7 +1,7 @@
 package task
 
 type Tasker interface {
-	Do() Result // TODO: should Do() return *Result?
+	Do() Result
 	GetID() uint
 }
 
