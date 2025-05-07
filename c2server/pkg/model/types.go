@@ -8,10 +8,11 @@ const (
 	Configure TaskType = iota
 	Ping
 	ShellCommand
+	FileTransfer
 )
 
 func (t TaskType) String() string {
-	names := []string{"Configure", "Ping", "ShellCommand"}
+	names := []string{"Configure", "Ping", "ShellCommand", "FileTransfer"}
 	if int(t) < len(names) {
 		return names[t]
 	}
@@ -28,6 +29,7 @@ type SystemInfo struct {
 	IPs                  []string `json:"ips,omitempty" gorm:"type:text[]"`
 }
 
+// TODO: check over the new 1-1 association w/ Task + Result -> check over implant logic as well
 type Implant struct {
 	gorm.Model
 	SystemInfo
@@ -39,13 +41,11 @@ type Implant struct {
 	Tasks []Task `gorm:"foreignKey:ImplantID;constraint:OnDelete:CASCADE;"`
 }
 
-// TODO: check over the new 1-1 association w/ Task + Result -> check over implant logic as well
-
 type Task struct {
 	gorm.Model
-	Type      TaskType               `json:"type"` // TODO: rename to task_type? // TODO: HAVE ENUM
+	TaskType  `json:"type"`
 	Options   map[string]interface{} `json:"options" gorm:"serializer:json;type:jsonb"`
-	Completed bool                   `json:"completed"` // TODO: have enum "Status" -> "pending", "errored+completd" "successfullyCompletd"
+	Completed bool                   `json:"completed"`
 	Result    `json:"result" gorm:"foreignKey:TaskID;constraint:OnDelete:CASCADE;"`
 	ImplantID uint `json:"implant_id" gorm:"index"`
 }
@@ -53,6 +53,6 @@ type Task struct {
 type Result struct {
 	gorm.Model
 	Content string `json:"content"`
-	Success bool   `json:"success"` // TODO: if implant sends this back, instead of storing it in database, just configure the Completed enum in Task
+	Success bool   `json:"success"`
 	TaskID  uint   `json:"task_id" gorm:"index"`
 }

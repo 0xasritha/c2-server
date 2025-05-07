@@ -1,10 +1,6 @@
 package listener
 
-import (
-	"fmt"
-	"gorm.io/gorm"
-)
-
+// TODO: do we want to maintain CommProtocol -> is this even being used anywere? if get rid it, then remove in implant as well
 type CommProtocol int
 
 const (
@@ -22,14 +18,4 @@ func (c CommProtocol) String() string {
 
 type Listener interface {
 	Listen()
-}
-
-func New(db *gorm.DB, commProtocol CommProtocol) (Listener, error) {
-	switch commProtocol {
-	case HTTPS:
-		return &HTTPSListener{db: db}, nil
-	case DNS:
-		return &DNSListener{db: db}, nil
-	}
-	return nil, fmt.Errorf("invalid communication protocol: %s", commProtocol)
 }

