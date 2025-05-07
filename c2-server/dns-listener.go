@@ -7,7 +7,6 @@ import (
 	"github.com/miekg/dns"
 	"gorm.io/gorm"
 	"log"
-	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -209,40 +208,40 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 		} else {
 			reply.Answer = []dns.RR{emptyTXT(q.Name)}
 		}
-	case dns.TypeSOA:
-		if q.Name == fqdnDomain {
-			m.Answer = append(m.Answer, &dns.SOA{
-				Hdr:     dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
-				Ns:      ns1Name,
-				Mbox:    "hostmaster." + fqdnDomain,
-				Serial:  serial,
-				Refresh: 3600, Retry: 1800, Expire: 604800, Minttl: 60,
-			})
-		}
-
-	// NS
-	case dns.TypeNS:
-		if q.Name == fqdnDomain {
-			m.Answer = append(m.Answer,
-				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns1Name},
-				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns2Name},
-			)
-		}
-
-	// A for your nameservers
-	case dns.TypeA:
-		switch q.Name {
-		case ns1Name:
-			m.Answer = append(m.Answer, &dns.A{
-				Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-				A:   net.ParseIP("<YOUR_STATIC_IP>"),
-			})
-		case ns2Name:
-			m.Answer = append(m.Answer, &dns.A{
-				Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-				A:   net.ParseIP("<YOUR_STATIC_IP>"),
-			})
-		}
+	//case dns.TypeSOA:
+	//	if q.Name == fqdnDomain {
+	//		m.Answer = append(m.Answer, &dns.SOA{
+	//			Hdr:     dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
+	//			Ns:      ns1Name,
+	//			Mbox:    "hostmaster." + fqdnDomain,
+	//			Serial:  serial,
+	//			Refresh: 3600, Retry: 1800, Expire: 604800, Minttl: 60,
+	//		})
+	//	}
+	//
+	//// NS
+	//case dns.TypeNS:
+	//	if q.Name == fqdnDomain {
+	//		m.Answer = append(m.Answer,
+	//			&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns1Name},
+	//			&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns2Name},
+	//		)
+	//	}
+	//
+	//// A for your nameservers
+	//case dns.TypeA:
+	//	switch q.Name {
+	//	case ns1Name:
+	//		m.Answer = append(m.Answer, &dns.A{
+	//			Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+	//			A:   net.ParseIP("<YOUR_STATIC_IP>"),
+	//		})
+	//	case ns2Name:
+	//		m.Answer = append(m.Answer, &dns.A{
+	//			Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+	//			A:   net.ParseIP("<YOUR_STATIC_IP>"),
+	//		})
+	//	}
 	default:
 		reply.Answer = []dns.RR{emptyTXT(q.Name)} // TODO: would this wokr?
 	}
