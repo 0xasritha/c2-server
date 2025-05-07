@@ -31,7 +31,6 @@ func (s *ShellCommand) Do() Result {
 
 	// better way to do this?
 	if err != nil {
-		log.Println("Error executing command:", err)
 		result.Success = false
 		result.Content = err.Error()
 	} else {

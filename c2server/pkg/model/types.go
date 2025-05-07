@@ -43,11 +43,11 @@ type Implant struct {
 
 type Task struct {
 	gorm.Model
-	TaskType  `json:"type"`
+	TaskType  string                 `json:"type"`
 	Options   map[string]interface{} `json:"options" gorm:"serializer:json;type:jsonb"`
 	Completed bool                   `json:"completed"`
-	Result    `json:"result" gorm:"foreignKey:TaskID;constraint:OnDelete:CASCADE;"`
-	ImplantID uint `json:"implant_id" gorm:"index"`
+	Result    Result                 `json:"result" gorm:"foreignKey:TaskID;constraint:OnDelete:CASCADE;"`
+	ImplantID uint                   `json:"implant_id" gorm:"index"`
 }
 
 type Result struct {

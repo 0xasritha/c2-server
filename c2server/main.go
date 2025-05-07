@@ -11,7 +11,8 @@ import (
 
 const (
 	DefaultCommProtocol = listener.HTTPS
-	Domain              = "cloud-docker.net"
+	Domain              = "localhost"
+	// Domain              = "cloud-docker.net"
 )
 
 func setupDB() *gorm.DB {
