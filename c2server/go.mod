@@ -1,4 +1,4 @@
-module asritha.dev/listener
+module asritha.dev/c2server
 
 go 1.24.2
 

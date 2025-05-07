@@ -1,13 +1,15 @@
 package main
 
 import (
+	"asritha.dev/c2server/pkg/listener"
+	"asritha.dev/c2server/pkg/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
 )
 
 const (
-	DEFAULT_IMPLANT_COMM_PROTOCOL = HTTPS
+	DEFAULT_IMPLANT_COMM_PROTOCOL = listener.HTTPS
 )
 
 // TODO: where to put this?
@@ -19,7 +21,7 @@ func setupDB() *gorm.DB {
 		// TODO: how to read these logs?
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	if err = db.AutoMigrate(&Implant{}, &Task{}, &Result{}); err != nil {
+	if err = db.AutoMigrate(&model.Implant{}, &model.Task{}, &model.Result{}); err != nil {
 		panic(err) // TODO: fix
 	}
 	return db
@@ -28,9 +30,10 @@ func setupDB() *gorm.DB {
 func main() {
 	db := setupDB()
 
-	httpsListener, _ := NewListener(db, HTTPS)
-	httpsListener.listen()
+	// TODO: does this logic make sense?
+	httpsListener, _ := listener.New(db, listener.HTTPS)
+	httpsListener.Listen()
 
-	dnsListener, _ := NewListener(db, DNS)
-	dnsListener.listen()
+	dnsListener, _ := listener.New(db, listener.DNS)
+	dnsListener.Listen()
 }

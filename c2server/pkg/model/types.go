@@ -1,21 +1,6 @@
-package main
+package model
 
 import "gorm.io/gorm"
-
-type CommProtocol int
-
-const (
-	HTTPS CommProtocol = iota
-	DNS
-)
-
-func (c CommProtocol) String() string {
-	names := []string{"HTTPS", "DNS"}
-	if int(c) < len(names) {
-		return names[c]
-	}
-	return "UNKNOWN"
-}
 
 type TaskType int
 
@@ -47,9 +32,9 @@ type Implant struct {
 	gorm.Model
 	SystemInfo
 
-	Dwell        string       `json:"dwell" gorm:"default:'5m'"`
-	Jitter       float64      `json:"jitter" gorm:"default:0"`
-	CommProtocol CommProtocol `json:"comm_protocol" gorm:"default:0"`
+	Dwell        string  `json:"dwell" gorm:"default:'5m'"`
+	Jitter       float64 `json:"jitter" gorm:"default:0"`
+	CommProtocol string  `json:"comm_protocol" gorm:"default:HTTPS"` // enum from listener.CommProtocol
 
 	Tasks []Task `gorm:"foreignKey:ImplantID;constraint:OnDelete:CASCADE;"`
 }
