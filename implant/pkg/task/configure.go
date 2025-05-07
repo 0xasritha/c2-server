@@ -1,6 +1,6 @@
 package task
 
-type ConfigureImplant struct {
+type Configure struct {
 	NewJitter         float64
 	NewDwell          string
 	NewC2CommProtocol string
@@ -8,9 +8,9 @@ type ConfigureImplant struct {
 }
 
 // TODO: implement same spec in server
-func NewConfigureImplantTask(ID uint, config map[string]interface{}) *ConfigureImplant {
+func NewConfigureImplantTask(ID uint, config map[string]interface{}) *Configure {
 
-	configureImplant := new(ConfigureImplant)
+	configureImplant := new(Configure)
 	if raw, ok := config["NewDwell"]; ok {
 		if s, ok := raw.(string); ok {
 			configureImplant.NewDwell = s
@@ -32,10 +32,10 @@ func NewConfigureImplantTask(ID uint, config map[string]interface{}) *ConfigureI
 }
 
 // THIS WILL NOT BE CALLED AS CONFIGURE IMPLANT is a special task
-func (p *ConfigureImplant) Do() Result {
+func (p *Configure) Do() Result {
 	return *new(Result)
 }
 
-func (p *ConfigureImplant) GetID() uint {
+func (p *Configure) GetID() uint {
 	return p.ID
 }
