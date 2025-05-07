@@ -22,7 +22,7 @@ type Implant struct {
 	ID     uint           `json:"id"`
 	Config *ImplantConfig `json:"config"`
 	SystemInfo
-	TaskQueue *task.TaskQueue
+	TaskQueue *task.Queue
 	Results   []task.Result
 	c2communicator.C2Communicator
 }
@@ -31,7 +31,7 @@ type Implant struct {
 func NewImplant() (*Implant, error) {
 	impl := &Implant{
 		SystemInfo: GetSystemInfo(),
-		TaskQueue:  task.NewTaskQueue(),
+		TaskQueue:  task.NewQueue(),
 	}
 
 	protocol, err := impl.register()
@@ -116,7 +116,7 @@ func (i *Implant) BeaconLoop() error {
 		time.Sleep(delay)
 
 		// perform beacon
-		// TODO: instead of returning TaskQueue, error, should return TaskQueue, malformedTasks []Task -> then use those to create a result
+		// TODO: instead of returning Queue, error, should return Queue, malformedTasks []Task -> then use those to create a result
 		var err error // why need this
 		i.TaskQueue, err = i.C2Communicator.Beacon(i.ID, i.Results)
 		if err != nil {

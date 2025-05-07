@@ -4,7 +4,7 @@ type Queue struct {
 	tasks []Tasker
 }
 
-func NewTaskQueue() *Queue {
+func NewQueue() *Queue {
 	return &Queue{tasks: make([]Tasker, 0)}
 }
 
