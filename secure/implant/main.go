@@ -13,7 +13,7 @@ import (
 // TODO: is this the correct way to do it?
 var (
 	// 32 byte long secret key
-	secretKey string = "N1PCdw3M2B1TfJhoaY2mL736p2vCUc47"
+	sharedSecretKey string = "N1PCdw3M2B1TfJhoaY2mL736p2vCUc47"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	fmt.Printf("Decrypted plaintext 1: %s \n", plaintext1)
 
 	// This will successfully encrypt & decrypt as well.
-	ciphertext2 := encrypt("Hello")
+	ciphertext2 := encrypt("hi_this_is_a_flag")
 	fmt.Printf("Encrypted ciphertext 2: %x \n", ciphertext2)
 
 	plaintext2 := decrypt(ciphertext2)
@@ -33,7 +33,7 @@ func main() {
 }
 
 func encrypt(plaintext string) string {
-	aes, err := aes.NewCipher([]byte(secretKey))
+	aes, err := aes.NewCipher([]byte(sharedSecretKey))
 	if err != nil {
 		panic(err)
 	}
@@ -42,23 +42,23 @@ func encrypt(plaintext string) string {
 		panic(err)
 	}
 
-	// 12-byte nonce for GCM; nonce should always be randomly generated for every encryption
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		panic(err) // or handle appropriately
+		panic(err)
 	}
 	// cipher text is nonce+ciphertext
 	// when decrypting, we can use size of nonce to separate it from cipher text
-	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+	ciphertext := gcm.Seal(nil, nonce, []byte(plaintext), nil)
 	return base64.StdEncoding.EncodeToString(ciphertext)
 }
 
 func decrypt(encodedCipherText string) string {
-	// TODO: handle error
-	// TODO: fix these variable names
-	ciphertext, _ := base64.StdEncoding.DecodeString(string(encodedCipherText))
+	ciphertext, err := base64.StdEncoding.DecodeString(string(encodedCipherText))
+	if err != nil {
+		panic(err)
+	}
 
-	aes, err := aes.NewCipher([]byte(secretKey))
+	aes, err := aes.NewCipher([]byte(sharedSecretKey))
 	if err != nil {
 		panic(err)
 	}
