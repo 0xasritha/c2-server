@@ -7,7 +7,7 @@ type C2Communicator interface {
 }
 
 // NewC2Communicator picks the right implementation based on protocol.
-func NewC2Communicator(protocol string) (C2Communicator, error) {
+func New(protocol string) (C2Communicator, error) {
 	switch protocol {
 	case "HTTPS":
 		return NewHTTPSC2Communicator(), nil
