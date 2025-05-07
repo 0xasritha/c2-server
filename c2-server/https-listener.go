@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,35 +82,23 @@ func (l *HTTPSListener) Beacon(c *gin.Context) {
 	// 1) Store results and mark tasks completed
 	// TODO: if there is an errored task, it should still mark it as complete - rn its just skipping it and itll always get sent bc of its not getting back an errored result
 	for _, res := range req.Results {
-		var task Task
-		if err := l.db.
-			Where("id = ? AND implant_id = ?", res.TaskID, req.ImplantID).
-			First(&task).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// append the result
-		if err := l.db.Model(&task).Association("Results").Append(&res); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		// mark completed
-		if err := l.db.Model(&task).Update("completed", true).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if err := storeNewResult(l.db, req.ImplantID, res); err != nil {
+			// if you want BadRequest on missing tasks vs InternalError on DB issues // TODO: check this over
+			status := http.StatusInternalServerError
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				status = http.StatusBadRequest
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
 	// 2) Fetch all pending tasks for this implant
-	var newTasks []Task
-	if err := l.db.
-		Where("implant_id = ? AND completed = false", req.ImplantID).
-		Find(&newTasks).Error; err != nil {
+	newTasks, err := getPendingTasksForImplant(l.db, req.ImplantID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, newTasks)
 }
 
@@ -218,7 +207,7 @@ func (l *HTTPSListener) ListResults(c *gin.Context) {
 	// collect results
 	var results []Result
 	for _, t := range tasks {
-		results = append(results, t.Results...)
+		results = append(results, t.Result)
 	}
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }

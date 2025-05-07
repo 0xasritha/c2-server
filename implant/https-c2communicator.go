@@ -2,14 +2,14 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
 )
 
 type HTTPSC2TaskRequest struct {
@@ -110,7 +110,7 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []Result) (*TaskQue
 		switch t.TaskType {
 		case "Ping":
 			tq.Enqueue(NewPingTask(t.ID))
-		case "Command":
+		case "Command": // TODO: make this ShellCommand for consistent naming?
 			// TODO: CHECKOVER
 			raw, ok := t.Options["commandWithArgs"]
 			if !ok {
