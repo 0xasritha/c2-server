@@ -1,10 +1,9 @@
 package task
 
 type Tasker interface {
-	Execute() Result
+	Do() Result
 	GetID() uint
 }
 
-type TaskMetadata struct {
-	ID uint `json:"id"`
+type Metadata struct {
 }

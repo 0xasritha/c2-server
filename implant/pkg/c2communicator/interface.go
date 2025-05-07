@@ -1,9 +1,12 @@
 package c2communicator
 
-import "fmt"
+import (
+	"asritha.dev/implant/pkg/task"
+	"fmt"
+)
 
 type C2Communicator interface {
-	Beacon(implantID uint, results []Result) (*TaskQueue, error)
+	Beacon(implantID uint, results []task.Result) (*task.TaskQueue, error)
 }
 
 // NewC2Communicator picks the right implementation based on protocol.

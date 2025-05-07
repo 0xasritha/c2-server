@@ -1,18 +1,16 @@
 package task
 
 type Ping struct {
-	TaskMetadata
+	ID uint `json:"id"`
 }
 
 func NewPing(ID uint) *Ping {
 	return &Ping{
-		TaskMetadata{
-			ID: ID,
-		},
+		ID: ID,
 	}
 }
 
-func (p *Ping) Execute() Result {
+func (p *Ping) Do() Result {
 	return Result{Content: "pong", Success: true}
 }
 
