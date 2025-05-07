@@ -5,7 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// TODO: move to types?
 type CommProtocol int
 
 const (
@@ -23,7 +22,6 @@ func (c CommProtocol) String() string {
 
 type Listener interface {
 	Listen()
-	// register()
 }
 
 func New(db *gorm.DB, commProtocol CommProtocol) (Listener, error) {

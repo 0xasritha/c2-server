@@ -1,8 +1,35 @@
+version: "3.8"
+
 services:
   db:
     image: postgres
     environment:
-     POSTGRES_PASSWORD: password
-     POSTGRES_USER: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB:    postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  server:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgres://postgres:password@db:5432/postgres?sslmode=disable"
+      # HTTPS_BIND_ADDR: ":443"
+      HTTPS_BIND_ADDR: ":80"
+      # DNS_BIND_ADDR:   ":53"
+      DNS_BIND_ADDR:   ":52"
+    ports:
+      # - "443:443"
+      - "80:80"
+      # - "53:53/tcp"
+      # - "53:53/udp"
+      - "52:52/tcp"
+      - "52:52/udp"
+    restart: unless-stopped
+
+volumes:
+  db-data:
