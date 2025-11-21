@@ -22,21 +22,21 @@
 ---
 # TODO: 
 - **Exploit:**
-    - write script to pull any Docker image off Dockerhub, inject it w/ exploit binary, create new evil image (*NICE TO HAVE*) (Kat)
+    - write script to pull any Docker image off Dockerhub, inject it w/ exploit binary, create new evil image (*NICE TO HAVE*) 
     - write script to install Docker v 18.09.1 to quickly setup lab env (*NICE TO HAVE*)
-    - write "replace runC script": should redownload runC for running future containers, execute dropper script (Kat)
-    - write dropper script to pull evil image 2 w/ full implant binary, extract it, run it in memory (https://github.com/amenzhinsky/go-memexec) (Asritha) 
+    - write "replace runC script": should redownload runC for running future containers, execute dropper script 
+    - write dropper script to pull evil image 2 w/ full implant binary, extract it, run it in memory (https://github.com/amenzhinsky/go-memexec)
 
 - **Implant:**
-    - write Makefile to build implant binary w/ `garble` (obfuscation), strip debug info/symbol tables, etc. (Kat) 
-    - Kill switch (Kat)
+    - write Makefile to build implant binary w/ `garble` (obfuscation), strip debug info/symbol tables, etc. 
+    - Kill switch 
     - Implement Tasks: 
-        - Update Implant Config (Asritha) 
+        - Update Implant Config 
         - File Operations (*NICE TO HAVE*)
             - Need to update C2-server to create folder in GCP bucket for each implant + change GCP bucket permissions to publically writable? (temporarily)
-        - Cron Job (Persistence) (Kat)
+        - Cron Job (Persistence) 
         - `Rc.local` modifications? (Persistence) (*NICE TO HAVE*)
-        - Delete Docker container/daemon, Docker logging software logs (*NICE TO HAVE*) (Kat)
+        - Delete Docker container/daemon, Docker logging software logs (*NICE TO HAVE*) 
     - Make tasks execute concurrently (*NICE TO HAVE*)
 
 - **C2-Server:**
@@ -46,8 +46,8 @@
         - check over/ add in AES GCM for symmetric key encryption (working Proof of Concept in `./secure`) (Kat)
         - add in symmetric key exchange via/ DiffieHellman https://eminmuhammadi.com/articles/diffiehellman-key-exchange-example-in-golang) (Kat)
    - integrate DNS tunneling as second communication protocol option (Proof of Concept in `./dns-tunneling`)
-        - tunneling (Asritha) 
-        - tsig (Kat)  
+        - tunneling 
+        - tsig   
 
 - **Infra:**
     - setup proxy (*NICE TO HAVE*)
