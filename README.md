@@ -42,9 +42,9 @@
 - **C2-Server:**
    - add CLI for operators (*NICE TO HAVE*)
    - encryption (need to add corresponding implant code too): 
-        - add JWTs for implant authorization, for HTTPS only (working Proof of Concept in `./secure`) (Asritha)
-        - check over/ add in AES GCM for symmetric key encryption (working Proof of Concept in `./secure`) (Kat)
-        - add in symmetric key exchange via/ DiffieHellman https://eminmuhammadi.com/articles/diffiehellman-key-exchange-example-in-golang) (Kat)
+        - add JWTs for implant authorization, for HTTPS only (working Proof of Concept in `./secure`) 
+        - check over/ add in AES GCM for symmetric key encryption (working Proof of Concept in `./secure`)
+        - add in symmetric key exchange via/ DiffieHellman https://eminmuhammadi.com/articles/diffiehellman-key-exchange-example-in-golang) 
    - integrate DNS tunneling as second communication protocol option (Proof of Concept in `./dns-tunneling`)
         - tunneling 
         - tsig   
